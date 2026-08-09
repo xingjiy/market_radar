@@ -31,6 +31,17 @@ netlify deploy --prod
 - `src/components/ChartPanel.vue`：ECharts 生命周期与响应式尺寸封装。
 - `src/App.vue`：Dashboard 页面组合、搜索、刷新、时间范围、关注池与简报交互。
 - `src/styles.css`：响应式金融科技视觉系统。
+- `netlify/functions/market-snapshot.mjs`：东方财富行情代理，聚合指数、市场宽度、板块和 ETF 快照。
+- `src/services/market.ts`：前端行情服务，实时接口失败时自动回退 Mock。
+
+## 数据源接入
+
+当前已接入东方财富公开行情接口（指数、市场涨跌家数、行业板块、ETF 快照），通过 Netlify Function 统一代理到 `/api/market-snapshot`，避免浏览器跨域限制。页面右上角会显示当前数据源：
+
+- `东方财富`：实时接口返回成功。
+- `Mock`：接口超时、限流或本地开发未启动 Functions 时的兜底状态。
+
+本项目没有把任何账号密钥写入前端。东方财富公开行情接口可能存在频率限制，生产环境建议在 Function 中增加缓存、重试和数据源切换策略。
 
 ## 后续 API 接入建议
 

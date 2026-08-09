@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { ArrowUp, ArrowDown, Bell, Calendar, CircleCheckFilled, DataAnalysis, Document, Expand, Fold, Lightning, Refresh, Search, Setting, Star, TrendCharts, View } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
 import ChartPanel from './components/ChartPanel.vue'
 import SectionHeader from './components/SectionHeader.vue'
 import { aiBrief, breadth, emotion, etfs, marketMetrics, pulseSeries, rotationData, sectors, sentimentRadar, timeLabels, watchlist as initialWatchlist } from './data/mock'
+import { fetchMarketSnapshot, type MarketSnapshot } from './services/market'
 
 const activeNav = ref('市场全景')
 const pulseRange = ref('今日')
@@ -14,6 +15,13 @@ const showBrief = ref(false)
 const lastUpdated = ref('15:08:42')
 const watchlist = ref(initialWatchlist.map(item => ({ ...item })))
 const selectedSector = ref('半导体')
+const liveSnapshot = ref<MarketSnapshot | null>(null)
+const dataSource = ref<'eastmoney' | 'mock'>('mock')
+const dataLoading = ref(false)
+
+const currentBreadth = computed(() => liveSnapshot.value?.market.breadth ?? breadth)
+const displaySectors = computed(() => liveSnapshot.value?.sectors?.length ? liveSnapshot.value.sectors : sectors)
+const displayEtfs = computed(() => liveSnapshot.value?.etfs?.length ? liveSnapshot.value.etfs : etfs)
 
 const filteredWatchlist = computed(() => {
   const keyword = searchValue.value.trim().toLowerCase()
@@ -43,16 +51,29 @@ const rotationOption = computed<echarts.EChartsOption>(() => ({
 const sectorBarOption = computed<echarts.EChartsOption>(() => ({
   grid: { left: 6, right: 22, top: 8, bottom: 10, containLabel: true },
   xAxis: { type: 'value', show: false, max: 6 },
-  yAxis: { type: 'category', inverse: true, data: sectors.map(item => item.name), axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: '#34425a', fontSize: 12 } },
-  tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: (params: any) => { const item = sectors[params[0].dataIndex]; return `${item.name}<br/>涨跌：${item.change > 0 ? '+' : ''}${item.change}%<br/>净流入：${item.amount}` } },
-  series: [{ type: 'bar', barWidth: 11, data: sectors.map(item => ({ value: item.change, itemStyle: { color: item.change >= 0 ? '#1677ff' : '#ff6b73', borderRadius: [0, 6, 6, 0] }, label: { show: true, position: 'right', color: item.change >= 0 ? '#1677ff' : '#ff6b73', formatter: `${item.change > 0 ? '+' : ''}${item.change}%`, fontSize: 11 } })) }]
+  yAxis: { type: 'category', inverse: true, data: displaySectors.value.map(item => item.name), axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: '#34425a', fontSize: 12 } },
+  tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: (params: any) => { const item = displaySectors.value[params[0].dataIndex]; return `${item.name}<br/>涨跌：${item.change > 0 ? '+' : ''}${item.change}%<br/>净流入：${item.amount}` } },
+  series: [{ type: 'bar', barWidth: 11, data: displaySectors.value.map(item => ({ value: item.change, itemStyle: { color: item.change >= 0 ? '#1677ff' : '#ff6b73', borderRadius: [0, 6, 6, 0] }, label: { show: true, position: 'right', color: item.change >= 0 ? '#1677ff' : '#ff6b73', formatter: `${item.change > 0 ? '+' : ''}${item.change}%`, fontSize: 11 } })) }]
 }))
 
-function refreshData() {
+async function refreshData(showMessage = true) {
+  dataLoading.value = true
   const now = new Date()
   lastUpdated.value = now.toLocaleTimeString('zh-CN', { hour12: false })
-  ElMessage.success('市场数据已刷新（Mock）')
+  try {
+    liveSnapshot.value = await fetchMarketSnapshot()
+    dataSource.value = 'eastmoney'
+    if (liveSnapshot.value.sectors[0]) selectedSector.value = liveSnapshot.value.sectors[0].name
+    if (showMessage) ElMessage.success('东方财富行情已刷新')
+  } catch {
+    dataSource.value = 'mock'
+    if (showMessage) ElMessage.warning('实时行情暂不可用，已切换 Mock 数据')
+  } finally {
+    dataLoading.value = false
+  }
 }
+
+onMounted(() => { void refreshData(false) })
 
 function runSearch() {
   if (!searchValue.value.trim()) {
@@ -84,7 +105,7 @@ function openNav(name: string) {
       <nav class="main-nav" aria-label="主导航">
         <button v-for="item in ['市场全景', '热点板块', '核心观察', 'AI 简报']" :key="item" :class="['nav-item', { active: activeNav === item }]" @click="openNav(item)">{{ item }}</button>
       </nav>
-      <div class="market-status"><span class="status-dot" /> <div><b>A 股 · 交易中</b><small>08/10/2026 {{ lastUpdated }} 更新</small></div><button class="icon-button" aria-label="通知"><Bell /></button></div>
+      <div class="market-status"><span :class="['status-dot', { loading: dataLoading }]" /> <div><b>A 股 · 交易中</b><small>08/10/2026 {{ lastUpdated }} · {{ dataSource === 'eastmoney' ? '东方财富' : 'Mock' }}</small></div><button class="icon-button" aria-label="通知"><Bell /></button></div>
     </header>
 
     <main>
@@ -93,7 +114,7 @@ function openNav(name: string) {
           <template #prefix><Search /></template><template #suffix><span class="shortcut">Ctrl K</span></template>
         </el-input>
         <el-button type="primary" size="large" class="search-button" @click="runSearch">搜索</el-button>
-        <el-button class="refresh-button" :icon="Refresh" circle aria-label="刷新数据" @click="refreshData" />
+        <el-button class="refresh-button" :loading="dataLoading" :icon="Refresh" circle aria-label="刷新数据" @click="refreshData" />
       </section>
 
       <section class="hero-panel surface-grid">
@@ -109,8 +130,8 @@ function openNav(name: string) {
         <div class="pulse-gauge">
           <div class="eyebrow">MARKET PULSE</div>
           <div class="gauge-wrap"><div class="gauge-ring" :style="{ '--progress': `${emotion.score * 3.6}deg` }"><div class="gauge-core"><strong>{{ emotion.score }}</strong><span>{{ emotion.label }}</span></div></div></div>
-          <div class="breadth-labels"><div><small>上涨数量</small><b class="up-text">{{ breadth.up }}</b></div><div><small>下跌数量</small><b class="down-text">{{ breadth.down }}</b></div></div>
-          <div class="breadth-bar"><i :style="{ width: `${breadth.up / (breadth.up + breadth.down) * 100}%` }" /><i class="down-fill" /></div>
+          <div class="breadth-labels"><div><small>上涨数量</small><b class="up-text">{{ currentBreadth.up }}</b></div><div><small>下跌数量</small><b class="down-text">{{ currentBreadth.down }}</b></div></div>
+          <div class="breadth-bar"><i :style="{ width: `${currentBreadth.up / (currentBreadth.up + currentBreadth.down) * 100}%` }" /><i class="down-fill" /></div>
         </div>
       </section>
 
@@ -152,7 +173,7 @@ function openNav(name: string) {
         <SectionHeader eyebrow="ETF FLOW RADAR · 06" title="ETF 资金雷达" caption="价格动能、资金流向、成交活跃度交叉验证">
           <el-button text type="primary" :icon="Expand" @click="ElMessage.info('ETF 资金明细将在 V2 开放')">查看全部</el-button>
         </SectionHeader>
-        <div class="table-wrap"><el-table :data="etfs" class="radar-table" stripe>
+        <div class="table-wrap"><el-table :data="displayEtfs" class="radar-table" stripe>
           <el-table-column label="ETF 名称" min-width="190"><template #default="{ row }"><div class="name-cell"><span class="etf-icon">ETF</span><div><b>{{ row.name }}</b><small>{{ row.code }}</small></div></div></template></el-table-column>
           <el-table-column prop="price" label="最新价" width="110" />
           <el-table-column label="涨跌幅" width="120"><template #default="{ row }"><span :class="row.change >= 0 ? 'up-text' : 'down-text'">{{ row.change > 0 ? '+' : '' }}{{ row.change }}%</span></template></el-table-column>

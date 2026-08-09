@@ -29,6 +29,7 @@ button { cursor: pointer; }
 .nav-item:hover, .nav-item.active { color: var(--blue); background: #eff6ff; }
 .market-status { display: flex; align-items: center; gap: 9px; }
 .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #21b887; box-shadow: 0 0 0 4px rgba(33,184,135,.12); }
+.status-dot.loading { background: #f4b740; box-shadow: 0 0 0 4px rgba(244,183,64,.14); }
 .market-status b, .market-status small { display: block; text-align: right; }
 .market-status b { font-size: 12px; }
 .market-status small { margin-top: 3px; color: var(--muted); font-size: 10px; }
