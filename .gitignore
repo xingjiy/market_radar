@@ -3,3 +3,6 @@ dist
 .DS_Store
 .firecrawl
 *.local
+
+# Local Netlify folder
+.netlify
