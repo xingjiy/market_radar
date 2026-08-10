@@ -24,11 +24,11 @@ const json = (body, statusCode = 200) => ({
   body: JSON.stringify(body)
 })
 
-async function fetchJson(url, timeoutMs = 8000) {
+async function fetchJson(url, timeoutMs = 8000, extraHeaders = {}) {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), timeoutMs)
   try {
-    const response = await fetch(url, { signal: controller.signal, headers: { accept: 'application/json' } })
+    const response = await fetch(url, { signal: controller.signal, headers: { accept: 'application/json', ...extraHeaders } })
     if (!response.ok) throw new Error(`upstream ${response.status}`)
     return await response.json()
   } finally {
@@ -197,9 +197,18 @@ const POOL_ENDPOINTS = {
 async function fetchPoolCount(type, date) {
   const { path, sort } = POOL_ENDPOINTS[type]
   const url = `${PUSH2EX}/${path}?ut=7eea3edcaed734bea9cbfc24409ed989&dpt=wz.ztzt&Pageindex=0&pagesize=200&sort=${sort}&date=${date}`
-  const payload = await fetchJson(url, 6000)
-  const pool = payload?.data?.pool
-  return Array.isArray(pool) ? pool.length : null
+  // 东财 WAF 对云端 IP 偶发拦截：带浏览器头并重试 1 次
+  const headers = { 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36', referer: 'https://quote.eastmoney.com/' }
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const payload = await fetchJson(url, 6000, headers)
+      const pool = payload?.data?.pool
+      if (Array.isArray(pool)) return pool.length
+    } catch {
+      // 重试一次
+    }
+  }
+  return null
 }
 
 // ---------- 主处理 ----------
