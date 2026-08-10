@@ -9,11 +9,13 @@ import SectionHeader from '../components/SectionHeader.vue'
 import { searchStocks, type StockSearchResult } from '../services/stockSearch'
 import { fetchStockDetail, type MinutePoint, type StockDetail } from '../services/stockDetail'
 import { fetchStockAnalysis, type StockAnalysis } from '../services/stockAnalysis'
+import { useAnalysisStore } from '../stores/analysis'
 import { useWatchlistStore } from '../stores/watchlist'
 
 const route = useRoute()
 const router = useRouter()
 const watchlistStore = useWatchlistStore()
+const analysisStore = useAnalysisStore()
 
 const code = computed(() => String(route.params.code ?? '').toUpperCase())
 const quote = ref<StockSearchResult | null>(null)
@@ -258,9 +260,23 @@ async function loadQuote(): Promise<void> {
       } catch (error) {
         detailError.value = `行情/分时加载失败：${error instanceof Error ? error.message : 'unavailable'}`
       }
-      // 支撑/压力 + 走势分析：失败不影响行情展示
+      // 支撑/压力 + 走势分析：失败不影响行情展示；成功则记录到简报汇总
       try {
         analysis.value = await fetchStockAnalysis(code.value, { market, name: quote.value.name })
+        if (analysis.value) {
+          analysisStore.record({
+            code: analysis.value.code,
+            name: quote.value.name,
+            price: analysis.value.price,
+            date: analysis.value.date,
+            trendLabel: analysis.value.trend.label,
+            trendScore: analysis.value.trend.score,
+            direction: analysis.value.trend.direction,
+            aiText: analysis.value.ai?.text,
+            summary: analysis.value.summary,
+            analyzedAt: new Date().toISOString()
+          })
+        }
       } catch (error) {
         analysisError.value = `支撑位/走势分析暂不可用：${error instanceof Error ? error.message : 'unavailable'}`
       } finally {
@@ -417,7 +433,7 @@ onMounted(() => {
         </ul>
         <div v-if="analysis.ai" class="ai-box">
           <div class="ai-box-head">
-            <span class="ai-tag">AI 诊断 · {{ analysis.ai.provider }}</span>
+            <span class="ai-tag">AI 诊断 · {{ analysis.ai.providerName || analysis.ai.provider }}</span>
             <small>{{ analysis.ai.model }}</small>
           </div>
           <p>{{ analysis.ai.text }}</p>

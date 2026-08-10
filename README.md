@@ -69,9 +69,10 @@ docs/                        # 产品设计文档
 
 | 变量 | 说明 | 默认值 |
 | --- | --- | --- |
-| `LLM_API_KEY` | 大模型 API Key（智谱 AI `open.bigmodel.cn` 等） | 不配置则用规则分析 |
-| `LLM_BASE_URL` | API 地址（OpenAI 兼容 `/chat/completions`） | `https://open.bigmodel.cn/api/paas/v4` |
-| `LLM_MODEL` | 模型名 | `glm-4-flash` |
+| `LLM_API_KEY` | 大模型 API Key | 不配置则用规则分析 |
+| `LLM_PROVIDER` | 服务商：`zhipu`（智谱 AI）/ `siliconflow`（硅基流动） | `zhipu` |
+| `LLM_BASE_URL` | API 地址（OpenAI 兼容 `/chat/completions`），可覆盖 | `zhipu`→`https://open.bigmodel.cn/api/paas/v4`；`siliconflow`→`https://api.siliconflow.cn/v1` |
+| `LLM_MODEL` | 模型名，可覆盖 | `zhipu`→`glm-4-flash`；`siliconflow`→`Qwen/Qwen2.5-7B-Instruct` |
 
 ## 说明
 

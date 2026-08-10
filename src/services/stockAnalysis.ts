@@ -35,7 +35,7 @@ export interface StockAnalysis {
   /** 规则化摘要 */
   summary: string
   /** 可选：大模型诊断（配置 LLM_API_KEY 后返回） */
-  ai: { provider: string; model: string; text: string; generatedAt: string } | null
+  ai: { provider: string; providerName?: string; model: string; text: string; generatedAt: string } | null
   warnings?: string[]
 }
 

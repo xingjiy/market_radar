@@ -200,12 +200,20 @@ function buildSummary(name, code, price, trend, levels) {
   return `${name}（${code}）现价 ${price.toFixed(2)}，走势${trend.label}（评分 ${trend.score}/100）。${resText}；${supText}。建议结合成交量与板块环境综合判断，谨慎操作。`
 }
 
-/** 可选：调用免费大模型生成诊断（OpenAI 兼容；默认智谱 GLM-4-Flash） */
+/** 免费大模型服务商预置（OpenAI 兼容 chat/completions） */
+const LLM_PRESETS = {
+  zhipu: { base: 'https://open.bigmodel.cn/api/paas/v4', model: 'glm-4-flash', name: '智谱 AI' },
+  siliconflow: { base: 'https://api.siliconflow.cn/v1', model: 'Qwen/Qwen2.5-7B-Instruct', name: '硅基流动' }
+}
+
+/** 可选：调用免费大模型生成诊断（OpenAI 兼容；默认智谱 GLM-4-Flash，可用 LLM_PROVIDER 切换硅基流动） */
 async function callLlm(context) {
   const key = process.env.LLM_API_KEY
   if (!key) return null
-  const base = String(process.env.LLM_BASE_URL || 'https://open.bigmodel.cn/api/paas/v4').replace(/\/+$/, '')
-  const model = process.env.LLM_MODEL || 'glm-4-flash'
+  const provider = LLM_PRESETS[process.env.LLM_PROVIDER] ? process.env.LLM_PROVIDER : 'zhipu'
+  const preset = LLM_PRESETS[provider]
+  const base = String(process.env.LLM_BASE_URL || preset.base).replace(/\/+$/, '')
+  const model = process.env.LLM_MODEL || preset.model
   const system = '你是一名严谨的 A 股技术分析助手。只依据给定数据做客观判断，不预测具体收益，提示风险，输出不超过 150 字。'
   const user = `请对以下个股做简洁的走势诊断（趋势判断、关键支撑压力、风险提示）：${JSON.stringify(context)}`
   const payload = await fetchJson(
@@ -218,7 +226,7 @@ async function callLlm(context) {
   )
   const text = payload?.choices?.[0]?.message?.content
   if (!text) throw new Error('empty llm response')
-  return { provider: 'free-llm', model, text: String(text).trim() }
+  return { provider, providerName: preset.name, model, text: String(text).trim() }
 }
 
 async function handler(event) {

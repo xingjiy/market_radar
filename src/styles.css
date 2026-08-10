@@ -245,3 +245,21 @@ footer { display: flex; justify-content: space-between; gap: 20px; max-width: 14
 .index-breadth-empty { margin-top: 16px; padding: 12px; border-radius: 10px; background: #fafcff; color: #a6b2c2; font-size: 12px; text-align: center; }
 @media (max-width: 1080px) { .index-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 390px) { .index-price { font-size: 20px; } }
+/* ===== AI 简报：个股诊断汇总 ===== */
+.ai-stocks { margin-top: 16px; padding: 13px 15px; border: 1px solid #e3edf9; border-radius: 13px; background: #f8fbff; }
+.ai-stocks-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+.ai-stocks-head b { color: #43546d; font-size: 12px; }
+.ai-stocks-head span { color: #9aa8bc; font-size: 10px; }
+.ai-stock-list { display: grid; gap: 6px; }
+.ai-stock-row { display: grid; grid-template-columns: auto 1fr; gap: 10px; padding: 8px 0; border-bottom: 1px dashed #e7eef7; }
+.ai-stock-row:last-child { border-bottom: 0; }
+.ai-stock-trend { align-self: start; padding: 3px 8px; border-radius: 100px; font-size: 10px; font-weight: 700; white-space: nowrap; }
+.ai-stock-trend.trend-up { color: #c2484f; background: #fff0f1; }
+.ai-stock-trend.trend-down { color: #0e7f5e; background: #e9f8f3; }
+.ai-stock-trend.trend-range { color: #64748b; background: #f1f4f8; }
+.ai-stock-main { min-width: 0; }
+.ai-stock-main b, .ai-stock-main small { display: block; }
+.ai-stock-main b { color: #22304a; font-size: 12px; }
+.ai-stock-main small { margin-top: 2px; color: #9aa8bc; font-size: 10px; font-weight: 400; }
+.ai-stock-main p { display: -webkit-box; margin: 5px 0 0; overflow: hidden; color: #667a97; font-size: 11px; line-height: 1.7; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.ai-stocks-empty { margin: 4px 0 0; color: #a6b2c2; font-size: 11px; line-height: 1.7; }
