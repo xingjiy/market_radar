@@ -61,7 +61,11 @@ export const useMarketStore = defineStore('market', () => {
   const autoRefreshOn = ref(false)
 
   // ---------- getters ----------
-  const currentBreadth = computed(() => snapshot.value?.market.breadth ?? breadth)
+  const currentBreadth = computed(() => {
+  const b = snapshot.value?.market.breadth
+  if (b && b.up + b.down > 0) return b
+  return breadth
+})
 
   const displaySectors = computed<Sector[]>(() => {
     const list = snapshot.value?.sectors?.length ? snapshot.value.sectors : mockSectors
@@ -115,9 +119,10 @@ export const useMarketStore = defineStore('market', () => {
   const emotion = computed<Emotion>(() => {
     const snap = snapshot.value
     if (!snap) return mockEmotion
+    const b = currentBreadth.value
     const factors = computeEmotionFactors({
-      breadthUp: snap.market.breadth.up,
-      breadthDown: snap.market.breadth.down,
+      breadthUp: b.up,
+      breadthDown: b.down,
       limitUp: snap.market.limitUp,
       limitDown: snap.market.limitDown,
       brokenBoard: snap.market.brokenBoard,
@@ -125,8 +130,8 @@ export const useMarketStore = defineStore('market', () => {
       avgTurnoverYi: marketExtras.avgTurnoverYi
     })
     const score = Math.round((factors.values.reduce((a, b) => a + b, 0) / factors.values.length) * 10) / 10
-    const total = snap.market.breadth.up + snap.market.breadth.down
-    const width = total > 0 ? Math.round((snap.market.breadth.up / total) * 100) : 50
+    const total = b.up + b.down
+    const width = total > 0 ? Math.round((b.up / total) * 100) : 50
     return {
       score,
       label: emotionLabel(score),
@@ -161,7 +166,7 @@ export const useMarketStore = defineStore('market', () => {
   const metricCards = computed<Metric[]>(() => {
     const snap = snapshot.value
     if (!snap) return marketMetrics
-    const b = snap.market.breadth
+    const b = currentBreadth.value
     const up = b.up
     const down = b.down
     const breadthDiff = up - down
@@ -195,7 +200,10 @@ export const useMarketStore = defineStore('market', () => {
       warnings.value = data.warnings ?? []
       consecutiveFailures = 0
       lastFetchAt = Date.now()
-      if (showMessage) ElMessage.success(data.source === 'eastmoney' ? '东方财富行情已刷新' : '行情数据已刷新')
+      if (showMessage) {
+        const label = data.source === 'tencent' ? '腾讯财经' : data.source === 'eastmoney' ? '东方财富' : '行情'
+        ElMessage.success(label + '行情已刷新')
+      }
       return true
     } catch {
       snapshot.value = null

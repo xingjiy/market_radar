@@ -6,6 +6,12 @@ import { useMarketStore } from '../stores/market'
 const market = useMarketStore()
 
 const gaugeDeg = computed(() => `${market.emotion.score * 3.6}deg`)
+const dataSourceLabel = computed(() => {
+  if (market.dataSource === 'tencent') return '腾讯财经'
+  if (market.dataSource === 'eastmoney') return '东方财富'
+  return 'Mock'
+})
+
 const upRatio = computed(() => {
   const { up, down } = market.currentBreadth
   const total = up + down
@@ -22,7 +28,7 @@ const upRatio = computed(() => {
       <p class="hero-status">{{ market.emotion.label }}</p>
       <p class="hero-note">{{ market.emotion.note }}</p>
       <div class="tag-row"><button v-for="tag in market.emotion.tags" :key="tag" class="topic-tag">↗ {{ tag }}</button></div>
-      <div class="hero-meta"><span><CircleCheckFilled /> 开市情绪</span><span><CircleCheckFilled /> 数据源：{{ market.dataSource === 'eastmoney' ? '东方财富' : 'Mock' }}</span><span><CircleCheckFilled /> 置信度 {{ market.emotion.confidence }}%</span></div>
+      <div class="hero-meta"><span><CircleCheckFilled /> 开市情绪</span><span><CircleCheckFilled /> 数据源：{{ dataSourceLabel }}</span><span><CircleCheckFilled /> 置信度 {{ market.emotion.confidence }}%</span></div>
     </div>
     <div class="pulse-gauge">
       <div class="eyebrow">MARKET PULSE</div>

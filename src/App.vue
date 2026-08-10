@@ -25,6 +25,14 @@ const navItems: NavItem[] = [
 const dateLabel = computed(() => new Date().toLocaleDateString('en-GB'))
 const phaseText = computed(() => (market.autoRefreshOn ? '交易中' : '已收盘'))
 
+const dataSourceLabel = computed(() => {
+  if (market.dataSource === 'tencent') return '腾讯财经'
+  if (market.dataSource === 'eastmoney') return '东方财富'
+  return 'Mock'
+})
+const dataSourceDesc = computed(() =>
+  market.dataSource === 'mock' ? 'Mock 数据演示' : dataSourceLabel.value + '实时行情')
+
 function isActive(item: NavItem): boolean {
   if (route.path !== '/') return false
   return !item.section
@@ -54,7 +62,7 @@ async function openNav(item: NavItem): Promise<void> {
       </nav>
       <div class="market-status">
         <span :class="['status-dot', { loading: market.loading }]" />
-        <div><b>A 股 · {{ phaseText }}</b><small>{{ dateLabel }} {{ market.lastUpdated }} · {{ market.dataSource === 'eastmoney' ? '东方财富' : 'Mock' }}</small></div>
+        <div><b>A 股 · {{ phaseText }}</b><small>{{ dateLabel }} {{ market.lastUpdated }} · {{ dataSourceLabel }}</small></div>
         <button class="icon-button" aria-label="通知" @click="ElMessage.info('提醒功能将在 V3 开放')"><Bell /></button>
       </div>
     </header>
@@ -63,7 +71,7 @@ async function openNav(item: NavItem): Promise<void> {
 
     <footer>
       <span>RADAR OS / A-SHARE MARKET INTELLIGENCE</span>
-      <span><Calendar /> 数据锚点：{{ dateLabel }} · {{ market.dataSource === 'eastmoney' ? '东方财富实时行情' : 'Mock 数据演示' }}</span>
+      <span><Calendar /> 数据锚点：{{ dateLabel }} · {{ dataSourceDesc }}</span>
       <span>仅供研究参考，不构成投资建议</span>
     </footer>
   </div>

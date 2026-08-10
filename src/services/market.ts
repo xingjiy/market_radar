@@ -15,6 +15,8 @@ export interface MarketSnapshot {
   }
   sectors: Sector[]
   etfs: Array<ETF & { flow: string | null }>
+  /** 各数据域来源：indices/etfs -> tencent/eastmoney；breadth/sectors/pools -> eastmoney */
+  domains?: Record<string, 'tencent' | 'eastmoney'>
   warnings?: string[]
 }
 
