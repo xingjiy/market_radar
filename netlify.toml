@@ -22,6 +22,11 @@
   status = 200
 
 [[redirects]]
+  from = "/api/stock-analysis"
+  to = "/.netlify/functions/stock-analysis"
+  status = 200
+
+[[redirects]]
   from = "/api/stock-search"
   to = "/.netlify/functions/stock-search"
   status = 200

@@ -30,7 +30,7 @@ npm run typecheck  # vue-tsc 类型检查
 | 07 | ETF 资金雷达 | `EtfTable.vue` |
 | 08 | 核心观察列表 | `WatchList.vue` |
 | 09 | AI 市场简报 | `AiBriefCard.vue` |
-| — | 全局搜索 / 个股追踪 | `GlobalSearch.vue` + `views/StockDetail.vue` |
+| — | 全局搜索 / 个股追踪（支撑压力 · 走势分析 · AI 诊断） | `GlobalSearch.vue` + `views/StockDetail.vue` |
 
 ## 目录结构
 
@@ -44,7 +44,7 @@ src/
 ├── data/mock.ts             # 类型契约 + Mock 数据（类型即接口契约）
 ├── components/              # 图表与业务组件（ChartPanel 封装 ECharts 生命周期）
 └── views/                   # MarketOverview（首页聚合）、StockDetail
-netlify/functions/           # market-snapshot（聚合快照+涨停/跌停/炸板）、stock-search
+netlify/functions/           # market-snapshot / stock-detail / stock-analysis（支撑压力·走势分析·AI诊断）/ stock-search
 docs/                        # 产品设计文档
 ```
 
@@ -62,6 +62,16 @@ docs/                        # 产品设计文档
 - 板块强度：涨幅30% + 成交额20% + 资金流30% + 涨停数20%；
 - ETF 评分：价格趋势30% + 资金流30% + 成交活跃20% + 板块强度20%；
 - 情绪雷达六维：赚钱效应 / 资金活跃 / 热点强度 / 连板高度 / 市场宽度 / 风险偏好。
+
+## 可选：免费大模型 AI 诊断（个股走势分析）
+
+个股详情页「走势分析」默认使用规则化分析；在 Netlify 站点环境变量配置以下项后自动启用大模型诊断（OpenAI 兼容接口，默认智谱 AI 免费档 `glm-4-flash`）：
+
+| 变量 | 说明 | 默认值 |
+| --- | --- | --- |
+| `LLM_API_KEY` | 大模型 API Key（智谱 AI `open.bigmodel.cn` 等） | 不配置则用规则分析 |
+| `LLM_BASE_URL` | API 地址（OpenAI 兼容 `/chat/completions`） | `https://open.bigmodel.cn/api/paas/v4` |
+| `LLM_MODEL` | 模型名 | `glm-4-flash` |
 
 ## 说明
 

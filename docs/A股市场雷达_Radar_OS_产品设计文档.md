@@ -166,6 +166,8 @@ radar-os-a-share-dashboard
 │       └── SectionHeader.vue # 区块标题（eyebrow/title/caption/插槽）
 └── netlify/functions/
     ├── market-snapshot.mjs   # 指数/广度/板块/ETF 聚合快照
+    ├── stock-detail.mjs      # 个股全量行情 + 今日分时
+    ├── stock-analysis.mjs    # 支撑/压力 + 走势分析（可选 LLM AI 诊断）
     └── stock-search.mjs      # 东财 suggest + 实时报价
 ```
 
@@ -1004,6 +1006,14 @@ sequenceDiagram
 1. 输入即搜、结果去重、含类型标识；
 2. 点击候选正确跳转/弹窗；
 3. 特殊字符、空输入、超长输入不报错。
+
+**支撑位 / 压力位与走势分析（含可选 AI 诊断）**
+
+> 个股详情页新增两个面板：支撑位/压力位 + 走势分析（`netlify/functions/stock-analysis.mjs` + `src/views/StockDetail.vue`）。
+
+- **支撑/压力位**：基于 120 日日 K（腾讯 fqkline 前复权）计算 MA20/MA60、枢轴位（P/R1/R2/S1/S2）、20/60 日高低点；现价上方取最近 3 个压力位、下方取最近 3 个支撑位，含类型标签、距现价%、强度（近 60 日触及次数 ≥4 强 / ≥2 中 / 其余弱）。
+- **走势分析**：MA5/10/20/60 + 多空排列 + 5/20 日动量 → 方向（上涨/震荡/下跌）与 0-100 评分，附走势要点与规则化摘要。
+- **可选大模型诊断**：函数内置 OpenAI 兼容调用（默认智谱 `glm-4-flash` 免费档）。配置 Netlify 环境变量 `LLM_API_KEY`（可选 `LLM_BASE_URL` / `LLM_MODEL`）后自动启用；未配置或调用失败时回退规则分析，不影响功能。Key 仅存服务端，不暴露前端。
 
 ---
 

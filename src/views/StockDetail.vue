@@ -8,6 +8,7 @@ import ChartPanel from '../components/ChartPanel.vue'
 import SectionHeader from '../components/SectionHeader.vue'
 import { searchStocks, type StockSearchResult } from '../services/stockSearch'
 import { fetchStockDetail, type MinutePoint, type StockDetail } from '../services/stockDetail'
+import { fetchStockAnalysis, type StockAnalysis } from '../services/stockAnalysis'
 import { useWatchlistStore } from '../stores/watchlist'
 
 const route = useRoute()
@@ -20,6 +21,9 @@ const detail = ref<StockDetail | null>(null)
 const loading = ref(true)
 const notFound = ref(false)
 const detailError = ref('')
+const analysis = ref<StockAnalysis | null>(null)
+const analysisLoading = ref(false)
+const analysisError = ref('')
 
 const marketLabel = computed(() => {
   const m = detail.value?.market ?? ''
@@ -210,6 +214,31 @@ function buildMinuteOption(detailData: StockDetail | null): echarts.EChartsOptio
 
 const minuteOption = computed<echarts.EChartsOption>(() => buildMinuteOption(detail.value))
 
+/** 走势分析：均线 chips（MA 高于现价 = 承压 → 绿） */
+const maItems = computed(() => {
+  const ma = analysis.value?.trend.ma
+  const price = analysis.value?.price
+  if (!ma) return []
+  const list = [
+    { key: 'ma5', label: 'MA5', value: ma.ma5 },
+    { key: 'ma10', label: 'MA10', value: ma.ma10 },
+    { key: 'ma20', label: 'MA20', value: ma.ma20 },
+    { key: 'ma60', label: 'MA60', value: ma.ma60 }
+  ]
+  return list.map((it) => ({
+    ...it,
+    value: it.value != null ? it.value.toFixed(2) : '--',
+    className: price != null && it.value != null ? (it.value >= price ? 'down-text' : 'up-text') : ''
+  }))
+})
+
+const trendTone = computed(() => {
+  const d = analysis.value?.trend.direction
+  if (d === 'up') return 'up-text'
+  if (d === 'down') return 'down-text'
+  return 'flat-text'
+})
+
 async function loadQuote(): Promise<void> {
   loading.value = true
   notFound.value = false
@@ -222,10 +251,20 @@ async function loadQuote(): Promise<void> {
     notFound.value = !quote.value
     if (quote.value) {
       const market = String(quote.value.market ?? '').toLowerCase()
+      analysisLoading.value = true
+      analysisError.value = ''
       try {
         detail.value = await fetchStockDetail(code.value, market)
       } catch (error) {
         detailError.value = `行情/分时加载失败：${error instanceof Error ? error.message : 'unavailable'}`
+      }
+      // 支撑/压力 + 走势分析：失败不影响行情展示
+      try {
+        analysis.value = await fetchStockAnalysis(code.value, { market, name: quote.value.name })
+      } catch (error) {
+        analysisError.value = `支撑位/走势分析暂不可用：${error instanceof Error ? error.message : 'unavailable'}`
+      } finally {
+        analysisLoading.value = false
       }
     }
   } catch {
@@ -284,7 +323,7 @@ onMounted(() => {
         <div>
           <div class="eyebrow">STOCK TRACKING · 个股追踪</div>
           <h2 class="detail-title">{{ quote?.name ?? code }} <span class="detail-code">{{ code }}</span></h2>
-          <p class="detail-hint">实时行情 · 今日分时 · 量价分布 · 估值指标（腾讯财经）</p>
+          <p class="detail-hint">实时行情 · 支撑压力 · 走势分析 · 今日分时 · 估值指标（腾讯财经）</p>
         </div>
         <div v-if="quote" class="detail-quote">
           <div class="detail-price-wrap">
@@ -318,6 +357,75 @@ onMounted(() => {
         <div v-for="item in quoteItems" :key="item.label" class="quote-cell">
           <span class="quote-label">{{ item.label }}</span>
           <b :class="item.tone">{{ item.value }}</b>
+        </div>
+      </div>
+    </section>
+
+    <section v-if="detail" class="panel-card top-gap">
+      <SectionHeader eyebrow="KEY LEVELS · 支撑压力" title="支撑位 / 压力位" caption="基于 120 日 K 线 · MA / 枢轴 / 高低点" />
+      <el-skeleton v-if="analysisLoading" :rows="3" animated />
+      <p v-else-if="analysisError" class="detail-error">{{ analysisError }}</p>
+      <div v-else-if="analysis" class="level-board">
+        <div class="level-col">
+          <h4>支撑位</h4>
+          <div v-for="(lv, i) in analysis.levels.support" :key="lv.label + i" class="level-row">
+            <span class="level-no">S{{ i + 1 }}</span>
+            <div class="level-info"><b>{{ lv.price.toFixed(2) }}</b><small>{{ lv.label }}</small></div>
+            <span class="level-dist down-text">{{ lv.distancePct.toFixed(1) }}%</span>
+            <span class="strength-tag" :class="'s-' + lv.strength">{{ lv.strength }}</span>
+          </div>
+          <div v-if="!analysis.levels.support.length" class="level-empty">暂无支撑位</div>
+        </div>
+        <div class="level-cur">
+          <small>当前价</small>
+          <b :class="(detail.quote.change ?? 0) >= 0 ? 'up-text' : 'down-text'">{{ analysis.price.toFixed(2) }}</b>
+          <em>{{ analysis.date }}</em>
+        </div>
+        <div class="level-col">
+          <h4>压力位</h4>
+          <div v-for="(lv, i) in analysis.levels.resistance" :key="lv.label + i" class="level-row">
+            <span class="level-no">R{{ i + 1 }}</span>
+            <div class="level-info"><b>{{ lv.price.toFixed(2) }}</b><small>{{ lv.label }}</small></div>
+            <span class="level-dist up-text">+{{ lv.distancePct.toFixed(1) }}%</span>
+            <span class="strength-tag" :class="'s-' + lv.strength">{{ lv.strength }}</span>
+          </div>
+          <div v-if="!analysis.levels.resistance.length" class="level-empty">暂无压力位</div>
+        </div>
+      </div>
+    </section>
+
+    <section v-if="detail" class="panel-card top-gap">
+      <SectionHeader eyebrow="TREND & AI · 走势分析" title="走势分析" caption="均线系统 + 趋势评分 + 智能诊断" />
+      <el-skeleton v-if="analysisLoading" :rows="3" animated />
+      <p v-else-if="analysisError" class="detail-error">{{ analysisError }}</p>
+      <div v-else-if="analysis" class="trend-board">
+        <div class="trend-head">
+          <div class="trend-score">
+            <span>趋势评分</span>
+            <strong :class="trendTone">{{ analysis.trend.score }}</strong>
+            <em :class="trendTone">{{ analysis.trend.label }}</em>
+          </div>
+          <div class="trend-ma">
+            <div v-for="m in maItems" :key="m.key" class="ma-chip">
+              <span>{{ m.label }}</span>
+              <b :class="m.className">{{ m.value }}</b>
+            </div>
+          </div>
+        </div>
+        <ul class="trend-notes">
+          <li v-for="(note, i) in analysis.trend.notes" :key="i">{{ note }}</li>
+        </ul>
+        <div v-if="analysis.ai" class="ai-box">
+          <div class="ai-box-head">
+            <span class="ai-tag">AI 诊断 · {{ analysis.ai.provider }}</span>
+            <small>{{ analysis.ai.model }}</small>
+          </div>
+          <p>{{ analysis.ai.text }}</p>
+          <p class="ai-disclaimer">以上内容由大模型生成，仅供参考，不构成投资建议。</p>
+        </div>
+        <div v-else class="rule-box">
+          <p>{{ analysis.summary }}</p>
+          <p class="ai-disclaimer">当前为规则化分析；在 Netlify 配置 LLM_API_KEY 后可启用 AI 诊断。</p>
         </div>
       </div>
     </section>
@@ -372,5 +480,248 @@ onMounted(() => {
 }
 .minute-chart {
   margin-top: 4px;
+}
+.level-board {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 22px;
+  align-items: stretch;
+  margin-top: 6px;
+}
+.level-col {
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fafcff;
+}
+.level-col h4 {
+  margin: 0 0 6px;
+  color: #55677f;
+  font-size: 12px;
+}
+.level-row {
+  display: grid;
+  grid-template-columns: 26px 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px dashed #edf1f6;
+}
+.level-row:last-child {
+  border-bottom: 0;
+}
+.level-no {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 6px;
+  color: #fff;
+  background: #b9c4d2;
+  font-size: 10px;
+  font-weight: 700;
+}
+.level-col:first-child .level-no {
+  background: linear-gradient(135deg, #55b893, #14a57b);
+}
+.level-col:last-child .level-no {
+  background: linear-gradient(135deg, #ff8f66, #ef626e);
+}
+.level-info b,
+.level-info small {
+  display: block;
+}
+.level-info b {
+  color: #22304a;
+  font-size: 14px;
+}
+.level-info small {
+  margin-top: 2px;
+  color: #9aa8bc;
+  font-size: 10px;
+}
+.level-dist {
+  font-size: 12px;
+  font-weight: 700;
+}
+.strength-tag {
+  padding: 2px 7px;
+  border-radius: 100px;
+  font-size: 10px;
+  font-weight: 600;
+}
+.strength-tag.s-强 {
+  color: #c2484f;
+  background: #fff0f1;
+}
+.strength-tag.s-中 {
+  color: #2478df;
+  background: #edf5ff;
+}
+.strength-tag.s-弱 {
+  color: #8b98aa;
+  background: #f1f4f8;
+}
+.level-empty {
+  padding: 14px 0;
+  color: #a6b2c2;
+  font-size: 12px;
+  text-align: center;
+}
+.level-cur {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 130px;
+  padding: 0 10px;
+}
+.level-cur small {
+  color: #8b98aa;
+  font-size: 11px;
+}
+.level-cur b {
+  font-size: 30px;
+  letter-spacing: -.02em;
+}
+.level-cur em {
+  color: #a6b2c2;
+  font-size: 10px;
+  font-style: normal;
+}
+.trend-board {
+  margin-top: 6px;
+}
+.trend-head {
+  display: flex;
+  align-items: center;
+  gap: 26px;
+  flex-wrap: wrap;
+}
+.trend-score span,
+.trend-score strong,
+.trend-score em {
+  display: block;
+}
+.trend-score span {
+  color: #8b98aa;
+  font-size: 11px;
+}
+.trend-score strong {
+  margin-top: 2px;
+  font-size: 38px;
+  line-height: 1;
+  letter-spacing: -.03em;
+}
+.trend-score em {
+  margin-top: 5px;
+  font-size: 13px;
+  font-style: normal;
+  font-weight: 700;
+}
+.trend-ma {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.ma-chip {
+  min-width: 74px;
+  padding: 10px 13px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: #fafcff;
+}
+.ma-chip span,
+.ma-chip b {
+  display: block;
+}
+.ma-chip span {
+  color: #8b98aa;
+  font-size: 10px;
+}
+.ma-chip b {
+  margin-top: 3px;
+  font-size: 14px;
+}
+.trend-notes {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0 0;
+  padding: 13px 15px;
+  border: 1px solid #edf1f6;
+  border-radius: 12px;
+  background: #fafcff;
+  list-style: none;
+}
+.trend-notes li {
+  position: relative;
+  padding-left: 14px;
+  color: #52627a;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.trend-notes li::before {
+  content: '';
+  position: absolute;
+  top: 7px;
+  left: 2px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--blue);
+}
+.ai-box,
+.rule-box {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: 13px;
+}
+.ai-box {
+  border: 1px solid #d9e9ff;
+  background: linear-gradient(145deg, #f2f8ff, #fbfdff);
+}
+.ai-box-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.ai-tag {
+  padding: 3px 9px;
+  border-radius: 100px;
+  color: #2478df;
+  background: #e4f0ff;
+  font-size: 10px;
+  font-weight: 700;
+}
+.ai-box-head small {
+  color: #9aa8bc;
+  font-size: 10px;
+}
+.ai-box p,
+.rule-box p {
+  margin: 0;
+  color: #43546d;
+  font-size: 13px;
+  line-height: 1.85;
+}
+.rule-box {
+  border: 1px solid #edf1f6;
+  background: #fafcff;
+}
+.ai-disclaimer {
+  margin-top: 8px !important;
+  color: #a1aec0 !important;
+  font-size: 10px !important;
+}
+@media (max-width: 760px) {
+  .level-board {
+    grid-template-columns: 1fr;
+  }
+  .level-cur {
+    min-height: 70px;
+  }
 }
 </style>
