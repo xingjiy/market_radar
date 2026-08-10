@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { Expand } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import SectionHeader from './SectionHeader.vue'

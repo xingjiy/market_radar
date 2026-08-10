@@ -1,4 +1,4 @@
-﻿import type { WatchItem } from '../data/mock'
+import type { WatchItem } from '../data/mock'
 
 const STORAGE_KEY = 'radar.watch.v1'
 

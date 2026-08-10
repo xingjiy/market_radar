@@ -1,4 +1,4 @@
-﻿/** 轻量 fetch 封装：超时、错误归一 */
+/** 轻量 fetch 封装：超时、错误归一 */
 export class HttpError extends Error {
   status: number
   constructor(status: number, message: string) {

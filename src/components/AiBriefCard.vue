@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { ArrowDown, ArrowUp, DataAnalysis } from '@element-plus/icons-vue'
 import SectionHeader from './SectionHeader.vue'

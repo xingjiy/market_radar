@@ -1,4 +1,4 @@
-﻿import type { ETF, Sector } from '../data/mock'
+import type { ETF, Sector } from '../data/mock'
 import { pulseSeries, timeLabels } from '../data/mock'
 import { httpGet } from './http'
 

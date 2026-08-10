@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { computed } from 'vue'
 import { CircleCheckFilled } from '@element-plus/icons-vue'
 import { useMarketStore } from '../stores/market'

@@ -1,4 +1,4 @@
-﻿# Radar OS · A股市场雷达
+# Radar OS · A股市场雷达
 
 基于 Vue 3 + TypeScript + Vite + Element Plus + ECharts 的专业金融科技 Dashboard。
 数据源：东方财富公开行情接口（Netlify Functions 代理），失败自动降级 Mock。

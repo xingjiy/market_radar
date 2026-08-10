@@ -1,4 +1,4 @@
-﻿import { defineStore } from 'pinia'
+import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { watchlist as seedWatchlist, type WatchItem } from '../data/mock'
 import { loadWatchlist, saveWatchlist } from '../services/watchlist'

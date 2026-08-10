@@ -1,4 +1,4 @@
-﻿import { defineStore } from 'pinia'
+import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { Emotion, ETF, Metric, RotationItem, Sector, SentimentFactor } from '../data/mock'

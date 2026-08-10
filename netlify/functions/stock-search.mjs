@@ -1,4 +1,4 @@
-﻿const SEARCH_URL = 'https://searchapi.eastmoney.com/api/suggest/get'
+const SEARCH_URL = 'https://searchapi.eastmoney.com/api/suggest/get'
 const QUOTE_URL = 'https://push2.eastmoney.com/api/qt/ulist.np/get'
 
 const response = (body, statusCode = 200) => ({

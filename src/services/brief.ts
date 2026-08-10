@@ -1,4 +1,4 @@
-﻿import { aiBrief, type AiBrief } from '../data/mock'
+import { aiBrief, type AiBrief } from '../data/mock'
 
 /**
  * 获取 AI 市场简报

@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { onBeforeUnmount, onMounted } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
 import GlobalSearch from '../components/GlobalSearch.vue'

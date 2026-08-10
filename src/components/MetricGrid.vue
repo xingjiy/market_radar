@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { Bell, CircleCheckFilled, DataAnalysis, Lightning, TrendCharts, View } from '@element-plus/icons-vue'
 import { useMarketStore } from '../stores/market'
 

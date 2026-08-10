@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { computed, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Bell, Calendar, TrendCharts } from '@element-plus/icons-vue'

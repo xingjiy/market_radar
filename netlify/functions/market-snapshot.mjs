@@ -1,4 +1,4 @@
-﻿const EASTMONEY = 'https://push2.eastmoney.com/api/qt'
+const EASTMONEY = 'https://push2.eastmoney.com/api/qt'
 const PUSH2EX = 'https://push2ex.eastmoney.com'
 
 const json = (body, statusCode = 200) => ({
