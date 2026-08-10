@@ -85,7 +85,7 @@ onMounted(() => {
         <el-skeleton :loading="loading" animated :rows="6" />
         <div v-if="!loading && quote" class="detail-tags">
           <span class="status-tag">{{ quote.type === 'Fund' ? 'ETF/基金' : quote.type === 'Index' ? '指数' : 'A股' }}</span>
-          <span class="status-tag">来源：{{ quote.market ? '东方财富' : '观察池' }}</span>
+          <span class="status-tag">来源：{{ quote.market ? '腾讯财经' : '观察池' }}</span>
         </div>
       </div>
     </section>

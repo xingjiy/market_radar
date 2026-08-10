@@ -1,6 +1,18 @@
+/**
+ * 市场综合快照 —— 数据源优先级：腾讯财经（主）→ 东方财富（备）→ Mock（前端兜底）
+ *
+ * 腾讯财经（主数据源）：
+ *   - 指数 / ETF / 个股报价：qt.gtimg.cn（GBK，~ 分隔）
+ *   - 沪深两市涨跌家数：qt.gtimg.cn/q=bkqtRank_A_sh,bkqtRank_A_sz
+ *   - 行业板块排行（涨跌幅 / 成交额 / 主力净流入 / 领涨股）：proxy.finance.qq.com getRank
+ * 东方财富（备用 / 补齐）：
+ *   - 涨停 / 跌停 / 炸板池计数：push2ex.eastmoney.com（腾讯免费接口无对应数据）
+ *   - 指数涨跌家数、板块、ETF 在腾讯失败时降级
+ */
+const TENCENT = 'https://qt.gtimg.cn'
+const TENCENT_RANK = 'https://proxy.finance.qq.com/cgi/cgi-bin/rank/pt/getRank'
 const EASTMONEY = 'https://push2.eastmoney.com/api/qt'
 const PUSH2EX = 'https://push2ex.eastmoney.com'
-const TENCENT = 'https://qt.gtimg.cn'
 
 const json = (body, statusCode = 200) => ({
   statusCode,
@@ -54,7 +66,7 @@ function tradeDateString() {
   return `${get('year')}${get('month')}${get('day')}`
 }
 
-// ---------- 腾讯财经（主数据源：指数 / ETF 报价） ----------
+// ---------- 腾讯财经（主数据源） ----------
 
 const INDEX_QUOTES = ['sh000001', 'sz399001', 'sz399006', 'sh000300']
 const ETF_QUOTES = ['sh588000', 'sz159995', 'sz159819', 'sh512480', 'sh510300']
@@ -62,7 +74,7 @@ const ETF_NAME_SUFFIX = /(华夏|易方达|华泰柏瑞|国联安|南方|嘉实|
 
 /**
  * 腾讯批量报价（qt.gtimg.cn，GBK）
- * 字段（~分隔）：1名称 2代码 3最新价 30时间 31涨跌 32涨跌幅% 36成交量(手) 37成交额(万)
+ * 字段（~ 分隔）：1名称 2代码 3最新价 30时间 31涨跌 32涨跌幅% 36成交量(手) 37成交额(万元)
  */
 async function fetchTencentQuotes(codes) {
   const text = await fetchTencentText(`${TENCENT}/q=${codes.join(',')}`)
@@ -84,7 +96,46 @@ async function fetchTencentQuotes(codes) {
   return rows
 }
 
-// ---------- 东方财富（备 / 腾讯未覆盖数据） ----------
+/** 沪深两市涨跌家数（腾讯 bkqtRank_A_sh / bkqtRank_A_sz） */
+async function fetchTencentBreadth() {
+  const text = await fetchTencentText(`${TENCENT}/q=bkqtRank_A_sh,bkqtRank_A_sz`)
+  const acc = { up: 0, flat: 0, down: 0 }
+  for (const line of text.split('\n')) {
+    const match = /^v_bkqtRank_A_(?:sh|sz)="([^"]*)";?$/.exec(line.trim())
+    if (!match) continue
+    const f = match[1].split('~')
+    if (f.length < 6) continue
+    acc.up += number(f[2])
+    acc.flat += number(f[3])
+    acc.down += number(f[4])
+  }
+  if (acc.up + acc.flat + acc.down === 0) throw new Error('empty breadth')
+  return acc
+}
+
+/** 行业板块排行（腾讯 getRank，按涨跌幅降序） */
+async function fetchTencentSectors() {
+  const url = `${TENCENT_RANK}?board_type=hy&sort_type=priceRatio&direct=down&offset=0&count=8`
+  const payload = await fetchJson(url)
+  const rows = payload?.data?.rank_list ?? []
+  return rows.map((row) => {
+    const change = number(row.zdf)
+    const amountYi = Math.round((number(row.turnover) / 10000) * 10) / 10 // 万元 -> 亿
+    const flowYi = Math.round((number(row.zljlr) / 10000) * 10) / 10 // 主力净流入 万元 -> 亿
+    return {
+      name: row.name,
+      change,
+      amount: `${amountYi.toFixed(1)}亿`,
+      amountYi,
+      flowYi,
+      leader: row.lzg?.name ?? row.lzg?.code ?? '',
+      heat: Math.max(45, Math.min(98, Math.round(50 + Math.abs(change) * 10))),
+      trend: change >= 0 ? 'up' : 'down'
+    }
+  })
+}
+
+// ---------- 东方财富（备用 / 腾讯无等价数据） ----------
 
 async function fetchEastmoneyIndicesBreadth() {
   const indexUrl = `${EASTMONEY}/ulist.np/get?fltt=2&invt=2&fields=f2,f3,f4,f12,f14,f104,f105,f106&secids=1.000001,0.399001,0.399006,1.000300`
@@ -100,7 +151,7 @@ async function fetchEastmoneySectors() {
   const sectorUrl = `${EASTMONEY}/clist/get?pn=1&pz=8&po=1&np=1&fid=f3&fs=m:90+t:2&fields=f2,f3,f4,f6,f12,f14,f62`
   const payload = await fetchJson(sectorUrl)
   return (payload?.data?.diff ?? []).map((row) => {
-    const change = Number((number(row.f3) / 100).toFixed(2))
+    const change = Number(number(row.f3).toFixed(2))
     const amount = yi(row.f6)
     const flow = yi(row.f62)
     return {
@@ -137,15 +188,15 @@ async function fetchEastmoneyEtfs() {
 }
 
 const POOL_ENDPOINTS = {
-  zt: { path: 'getTopicZTPool', dpt: 'wz.ztzt', sort: 'fbt%3Aasc' },
-  dt: { path: 'getTopicDTPool', dpt: 'wz.dtzt', sort: 'fbt%3Aasc' },
-  zb: { path: 'getTopicZBPool', dpt: 'wz.zb', sort: 'fbt%3Aasc' }
+  zt: { path: 'getTopicZTPool', sort: 'fbt%3Aasc' },
+  dt: { path: 'getTopicDTPool', sort: 'fund%3Aasc' },
+  zb: { path: 'getTopicZBPool', sort: 'fbt%3Aasc' }
 }
 
-/** 涨停/跌停/炸板池数量（仅东财提供，腾讯无此数据） */
+/** 涨停/跌停/炸板池数量（仅东财提供，腾讯无等价免费接口；dpt 均为 wz.ztzt） */
 async function fetchPoolCount(type, date) {
-  const { path, dpt, sort } = POOL_ENDPOINTS[type]
-  const url = `${PUSH2EX}/${path}?ut=7eea3edcaed734bea9cbfc24409ed989&dpt=${dpt}&Pageindex=0&pagesize=200&sort=${sort}&date=${date}`
+  const { path, sort } = POOL_ENDPOINTS[type]
+  const url = `${PUSH2EX}/${path}?ut=7eea3edcaed734bea9cbfc24409ed989&dpt=wz.ztzt&Pageindex=0&pagesize=200&sort=${sort}&date=${date}`
   const payload = await fetchJson(url, 6000)
   const pool = payload?.data?.pool
   return Array.isArray(pool) ? pool.length : null
@@ -157,7 +208,7 @@ async function handler() {
   const warnings = []
   const domains = {}
   const result = {
-    source: 'eastmoney',
+    source: 'tencent',
     fetchedAt: new Date().toISOString(),
     market: { breadth: { up: 0, down: 0, flat: 0 }, indices: [] },
     sectors: [],
@@ -172,7 +223,6 @@ async function handler() {
     if (quotes.length) {
       result.market.indices = quotes.map((q) => ({ code: q.code, name: q.name, price: q.price, change: q.changePct }))
       domains.indices = 'tencent'
-      result.source = 'tencent'
       const sh = quotes.find((q) => q.code === '000001')
       const sz = quotes.find((q) => q.code === '399001')
       if (sh && sz) result.market.turnoverYi = Math.round((sh.amountYi + sz.amountYi) * 10) / 10
@@ -181,20 +231,26 @@ async function handler() {
     warnings.push(`indices-tencent: ${error instanceof Error ? error.message : 'unavailable'}`)
   }
 
-  // 2) 涨跌家数：东财（腾讯无可用接口）；同时作为指数备源
+  // 2) 涨跌家数：腾讯主，失败降级东财
   try {
-    const em = await fetchEastmoneyIndicesBreadth()
-    result.market.breadth = em.breadth
-    domains.breadth = 'eastmoney'
-    if (!result.market.indices.length && em.indices.length) {
-      result.market.indices = em.indices
-      domains.indices = 'eastmoney'
-    }
+    result.market.breadth = await fetchTencentBreadth()
+    domains.breadth = 'tencent'
   } catch (error) {
-    warnings.push(`breadth: ${error instanceof Error ? error.message : 'unavailable'}`)
+    warnings.push(`breadth-tencent: ${error instanceof Error ? error.message : 'unavailable'}`)
+    try {
+      const em = await fetchEastmoneyIndicesBreadth()
+      result.market.breadth = em.breadth
+      domains.breadth = 'eastmoney'
+      if (!result.market.indices.length && em.indices.length) {
+        result.market.indices = em.indices
+        domains.indices = 'eastmoney'
+      }
+    } catch (error2) {
+      warnings.push(`breadth: ${error2 instanceof Error ? error2.message : 'unavailable'}`)
+    }
   }
 
-  // 3) ETF：腾讯主
+  // 3) ETF：腾讯主，失败降级东财
   try {
     const quotes = await fetchTencentQuotes(ETF_QUOTES)
     if (quotes.length) {
@@ -214,8 +270,6 @@ async function handler() {
   } catch (error) {
     warnings.push(`etfs-tencent: ${error instanceof Error ? error.message : 'unavailable'}`)
   }
-
-  // 3b) ETF 备源：东财
   if (!result.etfs.length) {
     try {
       result.etfs = await fetchEastmoneyEtfs()
@@ -225,15 +279,26 @@ async function handler() {
     }
   }
 
-  // 4) 板块：东财（含资金流，腾讯无对应免费接口）
+  // 4) 板块：腾讯主，失败降级东财
   try {
-    result.sectors = await fetchEastmoneySectors()
-    domains.sectors = 'eastmoney'
+    const sectors = await fetchTencentSectors()
+    if (sectors.length) {
+      result.sectors = sectors
+      domains.sectors = 'tencent'
+    }
   } catch (error) {
-    warnings.push(`sectors: ${error instanceof Error ? error.message : 'unavailable'}`)
+    warnings.push(`sectors-tencent: ${error instanceof Error ? error.message : 'unavailable'}`)
+  }
+  if (!result.sectors.length) {
+    try {
+      result.sectors = await fetchEastmoneySectors()
+      domains.sectors = 'eastmoney'
+    } catch (error) {
+      warnings.push(`sectors: ${error instanceof Error ? error.message : 'unavailable'}`)
+    }
   }
 
-  // 5) 涨停/跌停/炸板：东财
+  // 5) 涨停/跌停/炸板：东财（腾讯无等价免费接口）
   try {
     const date = tradeDateString()
     const [zt, dt, zb] = await Promise.allSettled([
@@ -253,6 +318,7 @@ async function handler() {
     warnings.push(`limit-pools: ${error instanceof Error ? error.message : 'unavailable'}`)
   }
 
+  result.source = Object.values(domains).includes('tencent') ? 'tencent' : 'eastmoney'
   const hasData = result.market.indices.length > 0 || result.sectors.length > 0 || result.etfs.length > 0
   return json(result, hasData ? 200 : 502)
 }

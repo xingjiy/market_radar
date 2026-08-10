@@ -228,34 +228,45 @@ flowchart LR
 
 | 优先级 | 数据源 | 用途 | 接入方式 | 说明 |
 | --- | --- | --- | --- | --- |
-| P0 | 腾讯财经公开接口 | 指数、ETF/个股报价（价格/涨跌/成交额） | Netlify Functions 代理（`qt.gtimg.cn`，GBK） | 行情报价稳定准确，作为主数据源 |
-| P1 | 东方财富公开接口 | 涨跌家数、行业板块与资金流、ETF 备源、涨停/跌停/炸板池、搜索 | Netlify Functions 代理（push2 / push2delay / searchapi / push2ex） | 字段丰富，覆盖腾讯未提供的板块/广度/涨停池数据 |
-| P2 | Mock 数据 | 本地开发 / 接口不可用兜底 | `src/data/mock.ts` | 保证 UI 可演示 |
+| P0 | 腾讯财经免费接口 | 指数/ETF/个股报价（价格/涨跌/成交额）、沪深涨跌家数、行业板块排行与主力资金流、个股/ETF/指数搜索 | Netlify Functions 转发：`qt.gtimg.cn`（GBK）、`smartbox.gtimg.cn`、`proxy.finance.qq.com getRank` | 行情稳定准确、不易封 IP，**全部数据域优先采用腾讯** |
+| P1 | 东方财富免费接口 | 涨停/跌停/炸板池（腾讯无等价免费接口）；腾讯失败时的指数涨跌家数/板块/ETF/搜索备用 | Netlify Functions 转发（push2 / searchapi / push2ex） | 字段丰富，补齐腾讯未覆盖的打板数据 |
+| P2 | Mock 数据 | 本地开发 / 接口不可用兜底 | `src/data/mock.ts` | 保证 UI 正常展示 |
 
-> 注意：公开接口无 SLA，存在频率限制与字段变动风险，代理层必须实现「缓存 + 重试 + 超时 + 降级」。
+> 注意：免费接口无 SLA、高频请求可能被限流、字段可能变动，须按"降级链 + 超时 + 重试 + 兜底"实现。
 
-### 5.2 东方财富接口清单
+### 5.2 数据源接口清单（腾讯主 / 东财备）
 
-| 接口 | 地址 | 参数要点 | 返回要点 | 用途 |
+**腾讯财经（主数据源）**
+
+| 接口 | 地址 | 必填参数 | 主要字段 | 用途 |
 | --- | --- | --- | --- | --- |
-| 多标的快照 | `push2.eastmoney.com/api/qt/ulist.np/get` | `secids`（市场.代码）、`fields` | `data.diff[]`：f2价/f3涨幅/f4涨跌额/f5成交量/f6成交额/f12代码/f14名称/f104涨家/f105跌家/f106平家 | 指数、ETF、自选报价 |
-| 板块列表 | `push2.eastmoney.com/api/qt/clist/get` | `fs=m:90+t:2`（行业板块）、`fid=f3`、`fields=f2,f3,f4,f12,f14,f62` | `data.diff[]`：f62 主力净流入 | 板块涨幅榜、资金流 |
-| 搜索建议 | `searchapi.eastmoney.com/api/suggest/get` | `input`、`type=14`、`count` | `QuotationCodeTable.Data[]`：Code/Name/QuoteID/Classify/MktNum | 个股搜索 |
-| 涨跌分布 | `push2ex.eastmoney.com/getTopicZDFenBu`（规划） | — | 涨跌区间分布 | 情绪/温度增强 |
+| 批量报价 | `qt.gtimg.cn/q=sh000001,sz159995,...` | 证券代码（市场前缀+6位，逗号分隔） | GBK、`~` 分隔：f1名称/f2代码/f3最新价/f31涨跌/f32涨跌幅%/f36成交量(手)/f37成交额(万元) | 指数 / ETF / 个股实时报价与两市成交额 |
+| 涨跌家数 | `qt.gtimg.cn/q=bkqtRank_A_sh,bkqtRank_A_sz` | 固定 | `v_bkqtRank_A_sh/sz`：f2涨/f3平/f4跌/f5总数 | 沪深两市涨跌家数（沪+深合计） |
+| 板块排行 | `proxy.finance.qq.com/cgi/cgi-bin/rank/pt/getRank` | `board_type=hy/gn`、`sort_type=priceRatio`、`direct`、`offset`、`count` | `data.rank_list[]`：name/zdf涨跌幅/turnover成交额(万元)/zljlr主力净流入(万元)/lzg领涨股/hsl换手率/zgb板块内涨跌家数 | 行业 / 概念板块涨幅榜与资金流 |
+| 联想搜索 | `smartbox.gtimg.cn/s3/?v=2&q=...&t=all` | `q` 关键字 | `v_hint="sh~600519~贵州茅台~gzmt~GP-A^..."`，`^` 分隔多条 | 个股 / ETF / 指数联想搜索 |
 
-**字段映射（东财 → 内部模型）**
+**东方财富（备用 / 补齐）**
 
-| 东财字段 | 含义 | 内部模型字段 |
+| 接口 | 地址 | 必填参数 | 主要字段 | 用途 |
+| --- | --- | --- | --- | --- |
+| 涨停股池 | `push2ex.eastmoney.com/getTopicZTPool` | `dpt=wz.ztzt`、`sort=fbt:asc`、`date=YYYYMMDD` | `data.pool[]` 长度 | 涨停家数 |
+| 跌停股池 | `push2ex.eastmoney.com/getTopicDTPool` | `dpt=wz.ztzt`、`sort=fund:asc`、`date=YYYYMMDD` | `data.pool[]` 长度 | 跌停家数 |
+| 炸板股池 | `push2ex.eastmoney.com/getTopicZBPool` | `dpt=wz.ztzt`、`sort=fbt:asc`、`date=YYYYMMDD` | `data.pool[]` 长度 | 炸板家数 |
+| 行情列表（备） | `push2.eastmoney.com/api/qt/ulist.np/get` | `secids`（市场.代码）、`fields` | `data.diff[]`：f2价格/f3涨跌幅/f12代码/f14名称/f104涨家/f105跌家/f106平盘 | 腾讯失败时的指数/ETF/涨跌家数备用 |
+| 板块列表（备） | `push2.eastmoney.com/api/qt/clist/get` | `fs=m:90+t:2`（行业板块）、`fid=f3`、`fields=f2,f3,f4,f12,f14,f62` | `data.diff[]`：f62 主力净流入 | 腾讯失败时的板块备用 |
+| 个股搜索（备） | `searchapi.eastmoney.com/api/suggest/get` | `input`、`type=14`、`count` | `QuotationCodeTable.Data[]`：Code/Name/QuoteID/Classify/MktNum | 腾讯失败时的搜索备用 |
+
+> 说明：涨停/跌停/炸板池为东财独有数据（腾讯免费接口无对应），始终标注 `domains.pools = "eastmoney"`。
+
+**字段映射（腾讯 → 内部模型）**
+
+| 腾讯字段 | 含义 | 内部模型字段 |
 | --- | --- | --- |
-| f2 | 最新价 | `price` |
-| f3 | 涨跌幅（%） | `change` |
-| f4 | 涨跌额 | `changeAmount` |
-| f5 | 成交量（手） | `volume` |
-| f6 | 成交额（元） | `amountRaw` → `amount`（亿，字符串展示） |
-| f12 | 代码 | `code` |
-| f14 | 名称 | `name` |
-| f62 | 主力净流入（元） | `flow` |
-| f104/f105/f106 | 涨/跌/平家数 | `breadth.up/down/flat` |
+| 报价 f3 / f32 / f37 | 最新价 / 涨跌幅% / 成交额(万元) | `price` / `change` / `amount`（亿） |
+| bkqtRank f2 / f3 / f4 | 涨 / 平 / 跌家数 | `breadth.up / flat / down` |
+| getRank zdf / turnover / zljlr | 板块涨跌幅% / 成交额(万元) / 主力净流入(万元) | `change` / `amountYi` / `flowYi` |
+| getRank lzg / hsl / zgb | 领涨股 / 换手率 / 板块内涨跌家数 | `leader` / `heat` 参考 / 板块宽度 |
+| smartbox market~code~name~type | 市场 / 代码 / 名称 / 类型 | `market` / `code` / `name` / `type` |
 
 ### 5.3 采集频率与缓存策略
 
@@ -272,7 +283,7 @@ flowchart LR
 
 1. **代理层缓存**：同参请求命中缓存直接返回，降低上游压力；
 2. **重试**：单次请求 8s 超时，失败重试 1 次；
-3. **多源切换**：东财失败 → 腾讯 → 仍失败返回 502（前端自动回退 Mock）；
+3. **数据源切换**：每域独立降级——优先腾讯，失败降级东财，全部失败返回 502，前端自动切入 Mock（涨停/跌停/炸板池仅东财）。
 4. **局部降级**：指数失败不影响板块/ETF 展示，`warnings[]` 上报各失败域；
 5. **节流**：前端轮询使用 60s 间隔；搜索使用 300ms debounce。
 
@@ -280,19 +291,24 @@ flowchart LR
 
 ```mermaid
 sequenceDiagram
-    participant C as 组件
+    participant C as 客户端
     participant S as Service
     participant F as Netlify Function
+    participant T as 腾讯财经
     participant E as 东方财富
     participant M as Mock
     C->>S: fetchMarketSnapshot()
     S->>F: GET /api/market-snapshot
-    F->>E: 聚合指数/板块/ETF
-    alt 上游成功
+    F->>T: 指数/涨跌家数/板块/ETF（腾讯主）
+    alt 腾讯成功
+        T-->>F: 原始字段
+    else 腾讯失败
+        F->>E: 降级：指数涨跌家数/板块/ETF；涨停跌停炸板池
         E-->>F: 原始字段
-        F-->>S: 归一化 MarketSnapshot
-        S-->>C: 渲染真实数据（source=eastmoney）
-    else 上游失败/超时/限流
+    end
+    F-->>S: 归一化 MarketSnapshot（domains 标注各域来源）
+    S-->>C: 渲染真实数据（source=tencent / eastmoney）
+    alt 全部失败 / 超时 / 异常
         F-->>S: warnings + 部分数据 / 502
         S->>M: 读取 mock.ts
         M-->>S: Mock MarketSnapshot
