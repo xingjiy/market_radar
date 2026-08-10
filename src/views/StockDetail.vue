@@ -287,10 +287,27 @@ const hasKline = computed(() => Boolean(klineOption.value?.series))
 /** K 线图：默认仅显示最近 1 条支撑/压力，避免遮挡；可切换全部 */
 const showAllLevels = ref(false)
 
+/** 依据股价设置 K 线 Y 轴刻度间隔（元）：<10→0.5，10-20→1，20-30→1.5，更高价位逐级放大 */
+function yTickInterval(price: number): number {
+  if (price < 1) return 0.05
+  if (price < 3) return 0.1
+  if (price < 5) return 0.25
+  if (price < 10) return 0.5
+  if (price < 20) return 1
+  if (price < 30) return 1.5
+  if (price < 50) return 2.5
+  if (price < 100) return 5
+  if (price < 200) return 10
+  if (price < 500) return 25
+  return 50
+}
+
 const klineOption = computed<echarts.EChartsOption>(() => {
   const a = analysis.value
   if (!a?.kline?.length) return {}
   const rows = a.kline
+  const tick = yTickInterval(a.price)
+  const tickDecimals = tick < 1 ? (tick < 0.5 ? 2 : 1) : tick >= 10 ? 0 : 1
   const dates = rows.map((r) => r.date)
   const candles = rows.map((r) => [r.open, r.close, r.low, r.high])
   const vols = rows.map((r) => r.volume)
@@ -321,7 +338,7 @@ const klineOption = computed<echarts.EChartsOption>(() => {
       { type: 'category', gridIndex: 1, data: dates, axisLabel: { show: false }, axisTick: { show: false }, axisLine: { show: false }, splitLine: { show: false } }
     ],
     yAxis: [
-      { scale: true, splitNumber: 4, splitLine: { lineStyle: { color: '#eef3f9' } }, axisLabel: { color: '#7d8ba1', fontSize: 10 } },
+      { scale: true, interval: tick, splitLine: { lineStyle: { color: '#eef3f9' } }, axisLabel: { color: '#7d8ba1', fontSize: 10, formatter: (v: number) => v.toFixed(tickDecimals) } },
       { gridIndex: 1, splitNumber: 2, splitLine: { show: false }, axisLabel: { show: false } }
     ],
     dataZoom: [{ type: 'inside', xAxisIndex: [0, 1], start: 50, end: 100 }],
