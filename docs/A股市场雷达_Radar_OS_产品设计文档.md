@@ -168,6 +168,7 @@ radar-os-a-share-dashboard
     ├── market-snapshot.mjs   # 指数/广度/板块/ETF 聚合快照
     ├── stock-detail.mjs      # 个股全量行情 + 今日分时
     ├── stock-analysis.mjs    # 支撑/压力 + 走势分析（可选 LLM AI 诊断）
+    ├── market-brief.mjs      # 六段式市场简报（规则 / 可选 LLM）
     └── stock-search.mjs      # 东财 suggest + 实时报价
 ```
 
@@ -920,9 +921,11 @@ sequenceDiagram
 
 ### 8.9 AI 市场简报
 
-**功能概述**：每日生成市场状态、主线、风险、关注方向的结构化简报，支持展开/收起。
+**功能概述**：基于全市场快照生成六段式详细简报（大盘概况 / 市场情绪 / 热点板块 / 资金动向 / 风险提示 / 关注方向），支持展开/收起。
 
-> **个股 AI 诊断汇总**：个股页每次支撑/压力分析成功后自动写入本地（localStorage，最多 8 条），简报内展示最近 5 条诊断（趋势标签 / 评分 / AI 或规则摘要）与强弱计数（偏强 = 上涨且评分 ≥60，偏弱 = 下跌且评分 ≤40）。
+> 生成方式（`netlify/functions/market-brief.mjs`，复用 `market-snapshot` 聚合数据）：
+> - **规则模式（默认）**：规则引擎基于指数/广度/涨停池/板块/ETF/成交额生成六段式简报；
+> - **AI 模式**：配置 `LLM_API_KEY`（可选 `LLM_PROVIDER` 切智谱 `glm-4-flash` / 硅基流动 `Qwen/Qwen2.5-7B-Instruct`）后由大模型生成更详细的诊断式简报（JSON 结构化），失败自动回退规则模式。
 
 **逻辑调用链**
 

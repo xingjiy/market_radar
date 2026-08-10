@@ -267,6 +267,10 @@ export interface AiBrief {
   confidence: number
   generatedAt: string
   metrics: { pulse: number; emotion: number; breadthScore: number }
+  /** 详细简报分节（规则或 AI 生成） */
+  sections?: Array<{ title: string; content: string }>
+  /** 生成方式：ai 大模型 / rule 规则 / mock 兜底 */
+  source?: 'ai' | 'rule' | 'mock'
 }
 
 export const aiBrief: AiBrief = {
@@ -276,5 +280,14 @@ export const aiBrief: AiBrief = {
   riskTips: ['高位连板股炸板率回升', '市场宽度尚未同步放大'],
   confidence: 78,
   generatedAt: '今日 15:08',
-  metrics: { pulse: 56.3, emotion: 54.5, breadthScore: 49 }
+  metrics: { pulse: 56.3, emotion: 54.5, breadthScore: 49 },
+  sections: [
+    { title: '大盘概况', content: '三大指数涨跌互现，两市成交额 1.18 万亿，上涨 2,517 家、下跌 2,566 家，市场宽度中性，权重与题材分化。' },
+    { title: '市场情绪', content: '涨停 68 家、跌停 14 家、炸板 32 家，炸板率 28.6% 处于中性区间，短线情绪偏强但高位分歧仍需警惕。' },
+    { title: '热点板块', content: '半导体、光学光电、消费电子涨幅居前，AI 算力、机器人跟涨，主线聚焦科技成长。' },
+    { title: '资金动向', content: '主力净流入居前：半导体 +35.2 亿、光学光电 +18.6 亿、消费电子 +15.2 亿；科创 50 等 ETF 同步放量。' },
+    { title: '风险提示', content: '高位连板股炸板率回升，市场宽度尚未同步放大，指数与个股赚钱效应存在背离。' },
+    { title: '关注方向', content: '跟踪半导体/消费电子量价延续性，观察两市量能能否同步放大以确认反弹成色。' }
+  ],
+  source: 'mock'
 }
