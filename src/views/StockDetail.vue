@@ -302,11 +302,23 @@ function yTickInterval(price: number): number {
   return 50
 }
 
+/** 返回比当前间隔更大的下一档（用于高波动区间放宽刻度，避免横线过密） */
+function nextTick(t: number): number {
+  const tiers = [0.05, 0.1, 0.25, 0.5, 1, 1.5, 2.5, 5, 10, 25, 50, 100, 200, 500]
+  for (const v of tiers) if (v > t) return v
+  return tiers[tiers.length - 1]
+}
+
 const klineOption = computed<echarts.EChartsOption>(() => {
   const a = analysis.value
   if (!a?.kline?.length) return {}
   const rows = a.kline
-  const tick = yTickInterval(a.price)
+  const minLow = Math.min(...rows.map((r) => r.low))
+  const maxHigh = Math.max(...rows.map((r) => r.high))
+  // 基础间隔按股价档位；若区间过大导致横线过密，则逐档放宽，横线数上限约 5 条
+  let tick = yTickInterval(a.price)
+  const MAX_TICKS = 5
+  while (maxHigh - minLow > tick * MAX_TICKS) tick = nextTick(tick)
   const tickDecimals = tick < 1 ? (tick < 0.5 ? 2 : 1) : tick >= 10 ? 0 : 1
   const dates = rows.map((r) => r.date)
   const candles = rows.map((r) => [r.open, r.close, r.low, r.high])
@@ -541,7 +553,7 @@ onMounted(() => {
             </button>
           </div>
           <div class="kline-chart">
-            <ChartPanel :option="klineOption" :height="330" />
+            <ChartPanel :option="klineOption" :height="360" />
           </div>
         </div>
         <div class="indicator-row">
