@@ -20,7 +20,13 @@ async function loadQuote(): Promise<void> {
   notFound.value = false
   try {
     const results = await searchStocks(code.value)
-    quote.value = results.find((r) => r.code.toUpperCase() === code.value) ?? results[0] ?? null
+    // 同代码多标的时优先 A 股 > ETF/基金 > 指数（避免 000021 命中 180治理 指数）
+    const matches = results.filter((r) => r.code.toUpperCase() === code.value)
+    quote.value =
+      matches.find((r) => r.type === 'AStock') ??
+      matches.find((r) => r.type === 'Fund') ??
+      matches[0] ??
+      null
     notFound.value = !quote.value
   } catch {
     // 上游不可用时回退观察池

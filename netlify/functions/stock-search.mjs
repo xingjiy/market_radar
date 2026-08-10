@@ -60,6 +60,12 @@ async function searchTencent(query) {
     if (!type) continue
     candidates.push({ market: parts[0], code: parts[1], name: parts[2], type })
   }
+  // 同代码多标的时优先 A 股 > ETF > 指数（如 000021：指数 180治理 与 股票 深科技 并存）
+  const typePriority = { AStock: 0, Fund: 1, Index: 2 }
+  candidates.sort((a, b) => {
+    if (a.code === b.code) return (typePriority[a.type] ?? 3) - (typePriority[b.type] ?? 3)
+    return 0
+  })
   return candidates.slice(0, 8)
 }
 
@@ -74,10 +80,10 @@ async function enrichTencent(candidates) {
     if (!match) continue
     const f = match[2].split('~')
     if (f.length < 38) continue
-    quoteMap.set(f[2], f)
+    quoteMap.set(match[1], f) // 用 sh000021 / sz000021 等带前缀代码作 key
   }
   return candidates.map((c) => {
-    const f = quoteMap.get(c.code)
+    const f = quoteMap.get(c.market + c.code)
     return {
       code: c.code,
       name: c.name,
