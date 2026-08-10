@@ -224,3 +224,24 @@ footer { display: flex; justify-content: space-between; gap: 20px; max-width: 14
   .detail-ranking { grid-template-columns: 1fr; }
   .metric-detail { padding: 16px 14px; }
 }
+/* ===== A股指数（IndexQuotes） ===== */
+.index-tabs { margin-left: auto; }
+.index-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 14px; }
+.index-card { position: relative; min-width: 0; padding: 16px 15px 13px; border: 1px solid rgba(255,255,255,.92); border-radius: 15px; background: var(--panel); box-shadow: 0 12px 30px rgba(58,95,139,.07); cursor: pointer; transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+.index-card:hover { transform: translateY(-2px); border-color: #cfe4ff; box-shadow: 0 16px 38px rgba(22,119,255,.14); }
+.index-card:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.index-card.active { border-color: #9cc9ff; background: linear-gradient(180deg, rgba(255,255,255,.98), #f3f9ff); box-shadow: 0 16px 38px rgba(22,119,255,.16); }
+.index-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.index-name { min-width: 0; }
+.index-name b, .index-name small { display: block; }
+.index-name b { overflow: hidden; color: #22304a; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.index-name small { margin-top: 2px; color: #9aa8bc; font-size: 10px; }
+.index-price { display: block; margin-top: 10px; font-size: 24px; letter-spacing: -.02em; }
+.index-chg { display: flex; align-items: baseline; gap: 8px; margin-top: 4px; }
+.index-chg em { font-size: 12px; font-style: normal; }
+.index-chg span { font-size: 13px; font-weight: 700; }
+.index-meta { display: flex; justify-content: space-between; gap: 6px; margin-top: 12px; padding-top: 10px; border-top: 1px dashed #edf1f6; color: #8b98aa; font-size: 10px; }
+.ratio-note { margin-left: auto; color: #8b98aa; }
+.index-breadth-empty { margin-top: 16px; padding: 12px; border-radius: 10px; background: #fafcff; color: #a6b2c2; font-size: 12px; text-align: center; }
+@media (max-width: 1080px) { .index-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 390px) { .index-price { font-size: 20px; } }

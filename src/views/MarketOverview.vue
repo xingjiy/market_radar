@@ -4,6 +4,7 @@ import { Refresh } from '@element-plus/icons-vue'
 import GlobalSearch from '../components/GlobalSearch.vue'
 import PulseGauge from '../components/PulseGauge.vue'
 import MetricGrid from '../components/MetricGrid.vue'
+import IndexQuotes from '../components/IndexQuotes.vue'
 import PulseTrend from '../components/PulseTrend.vue'
 import EmotionRadar from '../components/EmotionRadar.vue'
 import SectorBar from '../components/SectorBar.vue'
@@ -34,6 +35,7 @@ onBeforeUnmount(() => {
 
     <PulseGauge />
     <MetricGrid />
+    <IndexQuotes />
 
     <section class="two-col top-gap">
       <PulseTrend />

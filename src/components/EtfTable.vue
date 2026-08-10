@@ -39,7 +39,7 @@ function flowTone(row: { flow: string | null }): string {
 
 <template>
   <section id="etf" class="panel-card top-gap">
-    <SectionHeader eyebrow="ETF FLOW RADAR · 06" title="ETF 资金雷达" caption="价格动能、资金流向、成交活跃度交叉验证">
+    <SectionHeader eyebrow="ETF FLOW RADAR · 07" title="ETF 资金雷达" caption="价格动能、资金流向、成交活跃度交叉验证">
       <el-button text type="primary" :icon="Expand" @click="ElMessage.info('ETF 资金明细将在 V2 开放')">查看全部</el-button>
     </SectionHeader>
     <div class="segmented etf-tabs">

@@ -22,7 +22,7 @@ onMounted(async () => {
 
 <template>
   <article id="brief" class="panel-card ai-card">
-    <SectionHeader eyebrow="AI MARKET BRIEF · 08" title="AI 市场简报" caption="基于数据交叉验证生成" />
+    <SectionHeader eyebrow="AI MARKET BRIEF · 09" title="AI 市场简报" caption="基于数据交叉验证生成" />
     <div class="ai-status">
       <span class="ai-orb"><DataAnalysis /></span>
       <div><b>{{ brief?.status ?? '生成中…' }}</b><small>生成于 {{ brief?.generatedAt ?? '--' }}</small></div>

@@ -22,13 +22,14 @@ npm run typecheck  # vue-tsc 类型检查
 | --- | --- | --- |
 | 01 | 市场脉冲（Hero） | `PulseGauge.vue` |
 | — | 核心指标网格 | `MetricGrid.vue` |
-| 02 | 市场脉冲走势（今日/本周/本月） | `PulseTrend.vue` |
-| 03 | 市场情绪雷达 | `EmotionRadar.vue` |
-| 04 | 热点板块排行 | `SectorBar.vue` |
-| 05 | 板块轮动地图 | `RotationMap.vue` |
-| 06 | ETF 资金雷达 | `EtfTable.vue` |
-| 07 | 核心观察列表 | `WatchList.vue` |
-| 08 | AI 市场简报 | `AiBriefCard.vue` |
+| 02 | A股指数（主要/宽基 + L2 详情） | `IndexQuotes.vue` |
+| 03 | 市场脉冲走势（今日/本周/本月） | `PulseTrend.vue` |
+| 04 | 市场情绪雷达 | `EmotionRadar.vue` |
+| 05 | 热点板块排行 | `SectorBar.vue` |
+| 06 | 板块轮动地图 | `RotationMap.vue` |
+| 07 | ETF 资金雷达 | `EtfTable.vue` |
+| 08 | 核心观察列表 | `WatchList.vue` |
+| 09 | AI 市场简报 | `AiBriefCard.vue` |
 | — | 全局搜索 / 个股追踪 | `GlobalSearch.vue` + `views/StockDetail.vue` |
 
 ## 目录结构

@@ -7,7 +7,22 @@ export interface MarketSnapshot {
   fetchedAt: string
   market: {
     breadth: { up: number; down: number; flat: number }
-    indices: Array<{ code: string; name: string; price: number; change: number }>
+    indices: Array<{
+      code: string
+      name: string
+      price: number
+      change: number
+      changeAmount?: number
+      open?: number
+      prevClose?: number
+      high?: number
+      low?: number
+      amountYi?: number
+      amplitude?: number
+      up?: number
+      down?: number
+      flat?: number
+    }>
     limitUp?: number
     limitDown?: number
     brokenBoard?: number

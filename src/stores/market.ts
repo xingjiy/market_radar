@@ -1,12 +1,13 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import type { Emotion, ETF, Metric, MetricDetail, MetricKey, RotationItem, Sector, SentimentFactor } from '../data/mock'
+import type { Emotion, ETF, MarketIndex, Metric, MetricDetail, MetricKey, RotationItem, Sector, SentimentFactor } from '../data/mock'
 import {
   breadth,
   emotion as mockEmotion,
   etfs as mockEtfs,
   marketExtras,
+  marketIndices as mockIndices,
   pulseSeries,
   rotationData,
   sectors as mockSectors,
@@ -61,6 +62,19 @@ export const useMarketStore = defineStore('market', () => {
   const autoRefreshOn = ref(false)
 
   // ---------- getters ----------
+  /** 指数分组代码 */
+  const MAIN_INDEX_CODES = new Set(['000001', '399001', '399006', '000300'])
+  const BROAD_INDEX_CODES = new Set(['000016', '000688', '000905'])
+
+  const sourceIndices = computed<MarketIndex[]>(() =>
+    snapshot.value?.market.indices?.length ? snapshot.value.market.indices : mockIndices
+  )
+
+  /** 主要指数：上证/深证/创业板/沪深300 */
+  const mainIndices = computed<MarketIndex[]>(() => sourceIndices.value.filter((i) => MAIN_INDEX_CODES.has(i.code)))
+
+  /** 宽基指数：上证50/科创50/中证500 */
+  const broadIndices = computed<MarketIndex[]>(() => sourceIndices.value.filter((i) => BROAD_INDEX_CODES.has(i.code)))
   const currentBreadth = computed(() => {
   const b = snapshot.value?.market.breadth
   if (b && b.up + b.down > 0) return b
@@ -287,6 +301,8 @@ export const useMarketStore = defineStore('market', () => {
     pulseRange,
     autoRefreshOn,
     currentBreadth,
+    mainIndices,
+    broadIndices,
     displaySectors,
     displayEtfs,
     rotationItems,

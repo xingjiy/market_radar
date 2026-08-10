@@ -68,7 +68,7 @@ function tradeDateString() {
 
 // ---------- 腾讯财经（主数据源） ----------
 
-const INDEX_QUOTES = ['sh000001', 'sz399001', 'sz399006', 'sh000300']
+const INDEX_QUOTES = ['sh000001', 'sz399001', 'sz399006', 'sh000300', 'sh000016', 'sh000688', 'sh000905']
 const ETF_QUOTES = [
   'sh510300', 'sh510050', 'sh510500', 'sh512100', 'sh510880', 'sz159915', 'sh588000',
   'sz159995', 'sh512480', 'sh512760', 'sz159819', 'sh512690', 'sz159928', 'sh512170',
@@ -97,6 +97,11 @@ async function fetchTencentQuotes(codes) {
       price: number(f[3]),
       change: number(f[31]),
       changePct: number(f[32]),
+      prevClose: number(f[4]),
+      open: number(f[5]),
+      high: number(f[33]),
+      low: number(f[34]),
+      changeAmount: number(f[31]),
       amountYi: Math.round((number(f[37]) / 10000) * 10) / 10 // 万元 -> 亿
     })
   }
@@ -144,11 +149,42 @@ async function fetchTencentSectors() {
 
 // ---------- 东方财富（备用 / 腾讯无等价数据） ----------
 
+const INDEX_BREADTH_SECIDS = '1.000001,0.399001,0.399006,1.000300,1.000016,1.000688,1.000905'
+
+/** 各指数成分涨跌家数（东财 ulist f104/f105/f106，按指数代码返回 map） */
+async function fetchEastmoneyIndexBreadth() {
+  // 东财 WAF 对部分云端 IP 偶发拦截：push2 主、push2delay 备，各试 1 次
+  const path = `/api/qt/ulist.np/get?fltt=2&invt=2&fields=f2,f3,f4,f12,f14,f104,f105,f106&secids=${INDEX_BREADTH_SECIDS}`
+  const headers = { 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36', referer: 'https://quote.eastmoney.com/' }
+  for (const host of ['push2.eastmoney.com', 'push2delay.eastmoney.com']) {
+    try {
+      const payload = await fetchJson(`https://${host}${path}`, 6000, headers)
+      const map = {}
+      for (const row of payload?.data?.diff ?? []) {
+        map[row.f12] = { up: number(row.f104), down: number(row.f105), flat: number(row.f106) }
+      }
+      if (!Object.keys(map).length) throw new Error('empty index breadth')
+      return map
+    } catch {
+      // 切换备用主机
+    }
+  }
+  throw new Error('index breadth unavailable')
+}
+
 async function fetchEastmoneyIndicesBreadth() {
   const indexUrl = `${EASTMONEY}/ulist.np/get?fltt=2&invt=2&fields=f2,f3,f4,f12,f14,f104,f105,f106&secids=1.000001,0.399001,0.399006,1.000300`
   const payload = await fetchJson(indexUrl)
   const rows = payload?.data?.diff ?? []
-  const indices = rows.map((row) => ({ code: row.f12, name: row.f14, price: number(row.f2), change: number(row.f3) }))
+  const indices = rows.map((row) => ({
+    code: row.f12,
+    name: row.f14,
+    price: number(row.f2),
+    change: number(row.f3),
+    up: number(row.f104),
+    down: number(row.f105),
+    flat: number(row.f106)
+  }))
   const breadthRow = rows.find((row) => row.f12 === '000001') ?? rows[0]
   const breadth = { up: number(breadthRow?.f104), down: number(breadthRow?.f105), flat: number(breadthRow?.f106) }
   return { indices, breadth }
@@ -237,7 +273,19 @@ async function handler() {
   try {
     const quotes = await fetchTencentQuotes(INDEX_QUOTES)
     if (quotes.length) {
-      result.market.indices = quotes.map((q) => ({ code: q.code, name: q.name, price: q.price, change: q.changePct }))
+      result.market.indices = quotes.map((q) => ({
+        code: q.code,
+        name: q.name,
+        price: q.price,
+        change: q.changePct,
+        changeAmount: q.changeAmount,
+        open: q.open,
+        prevClose: q.prevClose,
+        high: q.high,
+        low: q.low,
+        amountYi: q.amountYi,
+        amplitude: q.prevClose ? Math.round(((q.high - q.low) / q.prevClose) * 10000) / 100 : undefined
+      }))
       domains.indices = 'tencent'
       const sh = quotes.find((q) => q.code === '000001')
       const sz = quotes.find((q) => q.code === '399001')
@@ -249,6 +297,24 @@ async function handler() {
     }
   } catch (error) {
     warnings.push(`indices-tencent: ${error instanceof Error ? error.message : 'unavailable'}`)
+  }
+
+  // 1.5) 指数成分涨跌家数：东财 f104-106（腾讯无等价免费接口），失败不影响指数展示
+  if (result.market.indices.length) {
+    try {
+      const breadthByCode = await fetchEastmoneyIndexBreadth()
+      for (const idx of result.market.indices) {
+        const b = breadthByCode[idx.code]
+        if (b) {
+          idx.up = b.up
+          idx.down = b.down
+          idx.flat = b.flat
+        }
+      }
+      domains.indexBreadth = 'eastmoney'
+    } catch (error) {
+      warnings.push(`index-breadth: ${error instanceof Error ? error.message : 'unavailable'}`)
+    }
   }
 
   // 2) 涨跌家数：腾讯主，失败降级东财

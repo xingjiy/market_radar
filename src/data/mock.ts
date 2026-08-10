@@ -59,6 +59,40 @@ export interface Metric {
   icon: string
 }
 
+export interface MarketIndex {
+  code: string
+  name: string
+  price: number
+  /** 涨跌幅 % */
+  change: number
+  /** 涨跌额 */
+  changeAmount?: number
+  open?: number
+  prevClose?: number
+  high?: number
+  low?: number
+  /** 成交额（亿） */
+  amountYi?: number
+  /** 振幅 % */
+  amplitude?: number
+  /** 成分上涨家数 */
+  up?: number
+  /** 成分下跌家数 */
+  down?: number
+  /** 成分平盘家数 */
+  flat?: number
+}
+
+export const marketIndices: MarketIndex[] = [
+  { code: '000001', name: '上证指数', price: 3966.59, change: 0.67, changeAmount: 26.55, open: 3943.82, prevClose: 3940.04, high: 3967.59, low: 3938.63, amountYi: 11668.9, amplitude: 0.74, up: 1711, down: 593, flat: 48 },
+  { code: '399001', name: '深证成指', price: 14316.96, change: 0.04, changeAmount: 5.95, open: 14348.95, prevClose: 14311.01, high: 14373.77, low: 14102.66, amountYi: 13562.1, amplitude: 1.89, up: 2213, down: 673, flat: 45 },
+  { code: '399006', name: '创业板指', price: 3537.21, change: -0.73, changeAmount: -25.91, open: 3567.05, prevClose: 3563.12, high: 3575.59, low: 3470.95, amountYi: 6578.7, amplitude: 2.94, up: 980, down: 404, flat: 16 },
+  { code: '000300', name: '沪深300', price: 4702.02, change: 0.16, changeAmount: 7.58, open: 4698.82, prevClose: 4694.44, high: 4714.46, low: 4659.47, amountYi: 7331, amplitude: 1.17, up: 208, down: 81, flat: 11 },
+  { code: '000016', name: '上证50', price: 2967.73, change: 0.25, changeAmount: 7.31, open: 2963.24, prevClose: 2960.42, high: 2980.64, low: 2954.62, amountYi: 2097.7, amplitude: 0.88, up: 27, down: 19, flat: 4 },
+  { code: '000688', name: '科创50', price: 1737.77, change: -0.36, changeAmount: -6.25, open: 1740.14, prevClose: 1744.02, high: 1752.93, low: 1704.08, amountYi: 1284.7, amplitude: 2.8, up: 24, down: 26, flat: 0 },
+  { code: '000905', name: '中证500', price: 8030.95, change: 0.64, changeAmount: 50.83, open: 8003.92, prevClose: 7980.12, high: 8031.16, low: 7910.84, amountYi: 4904.3, amplitude: 1.51, up: 336, down: 152, flat: 12 }
+]
+
 export interface MarketBreadth {
   up: number
   down: number

@@ -34,7 +34,7 @@ const radarOption = computed<echarts.EChartsOption>(() => ({
 
 <template>
   <article class="panel-card">
-    <SectionHeader eyebrow="SENTIMENT RADAR · 03" title="市场情绪雷达" caption="多因子交叉验证" />
+    <SectionHeader eyebrow="SENTIMENT RADAR · 04" title="市场情绪雷达" caption="多因子交叉验证" />
     <ChartPanel :option="radarOption" :height="280" />
     <div class="legend-row">
       <span><i class="legend-dot blue" />偏强因子</span>

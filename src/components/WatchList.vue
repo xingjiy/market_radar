@@ -29,7 +29,7 @@ function removeItem(code: string): void {
 
 <template>
   <article id="watch" class="panel-card">
-    <SectionHeader eyebrow="CORE WATCH · 07" title="核心观察列表" caption="我的关注池">
+    <SectionHeader eyebrow="CORE WATCH · 08" title="核心观察列表" caption="我的关注池">
       <el-button text type="primary" :icon="Setting" @click="drawerOpen = true">管理</el-button>
     </SectionHeader>
     <el-input v-model="keyword" class="watch-filter" placeholder="过滤观察池（代码 / 名称）" :prefix-icon="Search" clearable size="small" />

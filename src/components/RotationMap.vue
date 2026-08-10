@@ -31,7 +31,7 @@ const rotationOption = computed<echarts.EChartsOption>(() => ({
 
 <template>
   <article class="panel-card">
-    <SectionHeader eyebrow="ROTATION MAP · 05" title="板块轮动地图" caption="面积 = 资金规模 · 颜色 = 涨跌" />
+    <SectionHeader eyebrow="ROTATION MAP · 06" title="板块轮动地图" caption="面积 = 资金规模 · 颜色 = 涨跌" />
     <ChartPanel :option="rotationOption" :height="300" />
   </article>
 </template>

@@ -32,7 +32,7 @@ const pulseOption = computed<echarts.EChartsOption>(() => ({
 
 <template>
   <article class="panel-card">
-    <SectionHeader eyebrow="MARKET PULSE · 02" title="市场脉冲走势" caption="综合情绪指数（0–100）">
+    <SectionHeader eyebrow="MARKET PULSE · 03" title="市场脉冲走势" caption="综合情绪指数（0–100）">
       <div class="segmented">
         <button v-for="item in ranges" :key="item" :class="{ active: market.pulseRange === item }" @click="setRange(item)">{{ item }}</button>
       </div>

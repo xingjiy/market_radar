@@ -46,7 +46,7 @@ const sectorBarOption = computed<echarts.EChartsOption>(() => {
 
 <template>
   <article id="sectors" class="panel-card">
-    <SectionHeader eyebrow="HOT SECTORS · 04" title="热点板块排行" caption="涨幅 × 成交额 × 资金净流入" />
+    <SectionHeader eyebrow="HOT SECTORS · 05" title="热点板块排行" caption="涨幅 × 成交额 × 资金净流入" />
     <div class="sector-highlight"><span>当前聚焦</span><strong>{{ market.focusedSector }}</strong><em>资金共振</em></div>
     <ChartPanel :option="sectorBarOption" :height="246" />
   </article>
