@@ -34,6 +34,11 @@ async function fetchTencentText(url, timeoutMs = 6000) {
   }
 }
 
+/** smartbox 的 v_hint 值使用 JSON 字符串转义（如 \u4e2d\u5929...），解码为真实文本 */
+function decodeUnicode(raw) {
+  return raw.replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+}
+
 /** smartbox 类型 -> 内部类型：GP-A* A股 / ETF / ZS 指数 */
 function tencentType(raw) {
   if (typeof raw === 'string' && raw.startsWith('GP-A')) return 'AStock'
@@ -46,7 +51,7 @@ function tencentType(raw) {
 async function searchTencent(query) {
   const text = await fetchTencentText(`${SMARTBOX}?v=2&q=${encodeURIComponent(query)}&t=all`)
   const match = /^v_hint="([^"]*)";?$/.exec(text.trim())
-  const entries = match ? match[1].split('^') : []
+  const entries = match ? decodeUnicode(match[1]).split('^') : []
   const candidates = []
   for (const entry of entries) {
     const parts = entry.split('~')
