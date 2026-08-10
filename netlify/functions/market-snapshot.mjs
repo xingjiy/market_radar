@@ -241,7 +241,11 @@ async function handler() {
       domains.indices = 'tencent'
       const sh = quotes.find((q) => q.code === '000001')
       const sz = quotes.find((q) => q.code === '399001')
-      if (sh && sz) result.market.turnoverYi = Math.round((sh.amountYi + sz.amountYi) * 10) / 10
+      if (sh && sz) {
+        result.market.turnoverYi = Math.round((sh.amountYi + sz.amountYi) * 10) / 10
+        result.market.shTurnoverYi = Math.round(sh.amountYi * 10) / 10
+        result.market.szTurnoverYi = Math.round(sz.amountYi * 10) / 10
+      }
     }
   } catch (error) {
     warnings.push(`indices-tencent: ${error instanceof Error ? error.message : 'unavailable'}`)

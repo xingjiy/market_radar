@@ -5,7 +5,53 @@
 
 export type Trend = 'up' | 'down' | 'flat'
 
+/** 市场全景六指标卡标识（用于 L2 详情映射） */
+export type MetricKey = 'breadth' | 'limit' | 'turnover' | 'broken' | 'heat' | 'flow'
+
+/** 指标 L2 详情：单个分项统计 */
+export interface MetricStat {
+  label: string
+  value: string
+  tone?: Trend
+  hint?: string
+}
+
+/** 占比条分段 */
+export interface MetricRatioSegment {
+  label: string
+  pct: number
+  tone: Trend
+}
+
+/** 排行行 */
+export interface MetricRankRow {
+  label: string
+  value: string
+  tone?: Trend
+  pct?: number
+}
+
+/** 排行列表（支持双列） */
+export interface MetricRanking {
+  title: string
+  rows: MetricRankRow[]
+}
+
+/** 指标卡 L2 详情面板数据（层级内容展示） */
+export interface MetricDetail {
+  key: MetricKey
+  title: string
+  caption: string
+  main: { label: string; value: string; tone: Trend }
+  verdict: { text: string; tone: Trend }
+  stats: MetricStat[]
+  ratio?: { segments: MetricRatioSegment[] }
+  ranking?: MetricRanking[]
+  note: string
+}
+
 export interface Metric {
+  key: MetricKey
   label: string
   value: string
   delta: string
@@ -26,6 +72,10 @@ export interface MarketExtras {
   brokenBoard: number
   turnoverYi: number
   avgTurnoverYi: number
+  /** 沪市成交额（亿） */
+  shTurnoverYi: number
+  /** 深市成交额（亿） */
+  szTurnoverYi: number
 }
 
 export const marketExtras: MarketExtras = {
@@ -33,16 +83,18 @@ export const marketExtras: MarketExtras = {
   limitDown: 14,
   brokenBoard: 32,
   turnoverYi: 11800,
-  avgTurnoverYi: 11000
+  avgTurnoverYi: 11000,
+  shTurnoverYi: 5200,
+  szTurnoverYi: 6600
 }
 
 export const marketMetrics: Metric[] = [
-  { label: '上涨 / 下跌', value: '2,517 / 2,566', delta: '-49', tone: 'down', icon: 'TrendCharts' },
-  { label: '涨停 / 跌停', value: '68 / 14', delta: '+8 / -3', tone: 'up', icon: 'Lightning' },
-  { label: '两市成交额', value: '1.18 万亿', delta: '+6.4%', tone: 'up', icon: 'DataLine' },
-  { label: '炸板率', value: '28.6%', delta: '+4.2%', tone: 'down', icon: 'Warning' },
-  { label: '热点集中度', value: '72.4', delta: '+11.8', tone: 'up', icon: 'Aim' },
-  { label: '主力净流入', value: '+42.6 亿', delta: '净流入', tone: 'up', icon: 'Coin' }
+  { key: 'breadth', label: '上涨 / 下跌', value: '2,517 / 2,566', delta: '-49', tone: 'down', icon: 'TrendCharts' },
+  { key: 'limit', label: '涨停 / 跌停', value: '68 / 14', delta: '+8 / -3', tone: 'up', icon: 'Lightning' },
+  { key: 'turnover', label: '两市成交额', value: '1.18 万亿', delta: '+6.4%', tone: 'up', icon: 'DataLine' },
+  { key: 'broken', label: '炸板率', value: '28.6%', delta: '+4.2%', tone: 'down', icon: 'Warning' },
+  { key: 'heat', label: '热点集中度', value: '72.4', delta: '+11.8', tone: 'up', icon: 'Aim' },
+  { key: 'flow', label: '主力净流入', value: '+42.6 亿', delta: '净流入', tone: 'up', icon: 'Coin' }
 ]
 
 export const breadth: MarketBreadth = { up: 2517, down: 2566, flat: 398 }

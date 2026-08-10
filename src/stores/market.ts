@@ -1,13 +1,12 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import type { Emotion, ETF, Metric, RotationItem, Sector, SentimentFactor } from '../data/mock'
+import type { Emotion, ETF, Metric, MetricDetail, MetricKey, RotationItem, Sector, SentimentFactor } from '../data/mock'
 import {
   breadth,
   emotion as mockEmotion,
   etfs as mockEtfs,
   marketExtras,
-  marketMetrics,
   pulseSeries,
   rotationData,
   sectors as mockSectors,
@@ -25,6 +24,7 @@ import {
   parseYi,
   type ScoreContext
 } from '../utils/indicators'
+import { buildMetricDetails } from '../utils/metricDetails'
 
 export type PulseRange = '今日' | '本周' | '本月'
 
@@ -165,28 +165,65 @@ export const useMarketStore = defineStore('market', () => {
 
   const metricCards = computed<Metric[]>(() => {
     const snap = snapshot.value
-    if (!snap) return marketMetrics
     const b = currentBreadth.value
     const up = b.up
     const down = b.down
     const breadthDiff = up - down
-    const limitUp = snap.market.limitUp ?? marketExtras.limitUp
-    const limitDown = snap.market.limitDown ?? marketExtras.limitDown
-    const brokenBoard = snap.market.brokenBoard ?? marketExtras.brokenBoard
-    const turnoverYi = snap.market.turnoverYi ?? 0
+    const limitUp = snap?.market.limitUp ?? marketExtras.limitUp
+    const limitDown = snap?.market.limitDown ?? marketExtras.limitDown
+    const brokenBoard = snap?.market.brokenBoard ?? marketExtras.brokenBoard
+    const turnoverYi = snap?.market.turnoverYi ?? marketExtras.turnoverYi
     const turnoverDelta = turnoverYi && marketExtras.avgTurnoverYi
       ? ((turnoverYi - marketExtras.avgTurnoverYi) / marketExtras.avgTurnoverYi) * 100
       : null
     const brokenRate = limitUp + brokenBoard > 0 ? (brokenBoard / (limitUp + brokenBoard)) * 100 : 0
     const topFlow = displaySectors.value.reduce((acc, s) => acc + (s.flowYi ?? 0), 0)
+    const concentration = hotspotConcentration.value
     return [
-      { label: '上涨 / 下跌', value: `${up.toLocaleString()} / ${down.toLocaleString()}`, delta: `${breadthDiff > 0 ? '+' : ''}${breadthDiff}`, tone: breadthDiff >= 0 ? 'up' : 'down', icon: 'TrendCharts' },
-      { label: '涨停 / 跌停', value: `${limitUp} / ${limitDown}`, delta: '实时', tone: limitUp >= limitDown ? 'up' : 'down', icon: 'Lightning' },
-      { label: '两市成交额', value: turnoverYi ? `${(turnoverYi / 10000).toFixed(2)} 万亿` : '--', delta: turnoverDelta !== null ? `${turnoverDelta > 0 ? '+' : ''}${turnoverDelta.toFixed(1)}%` : '--', tone: turnoverDelta !== null && turnoverDelta >= 0 ? 'up' : 'down', icon: 'DataLine' },
-      { label: '炸板率', value: `${brokenRate.toFixed(1)}%`, delta: '实时', tone: brokenRate >= 30 ? 'down' : 'up', icon: 'Warning' },
-      { label: '热点集中度', value: '72.4', delta: 'TOP3 资金占比', tone: 'up', icon: 'Aim' },
-      { label: '主力净流入', value: `${topFlow > 0 ? '+' : ''}${topFlow.toFixed(1)} 亿`, delta: '板块合计', tone: topFlow >= 0 ? 'up' : 'down', icon: 'Coin' }
+      { key: 'breadth', label: '上涨 / 下跌', value: `${up.toLocaleString()} / ${down.toLocaleString()}`, delta: `${breadthDiff > 0 ? '+' : ''}${breadthDiff}`, tone: breadthDiff >= 0 ? 'up' : 'down', icon: 'TrendCharts' },
+      { key: 'limit', label: '涨停 / 跌停', value: `${limitUp} / ${limitDown}`, delta: '实时', tone: limitUp >= limitDown ? 'up' : 'down', icon: 'Lightning' },
+      { key: 'turnover', label: '两市成交额', value: turnoverYi ? `${(turnoverYi / 10000).toFixed(2)} 万亿` : '--', delta: turnoverDelta !== null ? `${turnoverDelta > 0 ? '+' : ''}${turnoverDelta.toFixed(1)}%` : '--', tone: turnoverDelta !== null && turnoverDelta >= 0 ? 'up' : 'down', icon: 'DataLine' },
+      { key: 'broken', label: '炸板率', value: `${brokenRate.toFixed(1)}%`, delta: '实时', tone: brokenRate >= 30 ? 'down' : 'up', icon: 'Warning' },
+      { key: 'heat', label: '热点集中度', value: concentration.toFixed(1), delta: 'TOP3 资金占比', tone: concentration >= 50 ? 'up' : 'flat', icon: 'Aim' },
+      { key: 'flow', label: '主力净流入', value: `${topFlow > 0 ? '+' : ''}${topFlow.toFixed(1)} 亿`, delta: '板块合计', tone: topFlow >= 0 ? 'up' : 'down', icon: 'Coin' }
     ]
+  })
+
+  /** 热点集中度：TOP3 板块主力净流入占全部正流入板块的比重（无正流入时按成交额口径，仍无数据回退 Mock） */
+  const hotspotConcentration = computed<number>(() => {
+    const sectors = displaySectors.value
+    const pos = sectors.map((s) => s.flowYi ?? 0).filter((v) => v > 0)
+    const posSum = pos.reduce((a, b) => a + b, 0)
+    if (posSum > 0) {
+      const top3 = [...pos].sort((a, b) => b - a).slice(0, 3).reduce((a, b) => a + b, 0)
+      return Math.round((top3 / posSum) * 1000) / 10
+    }
+    const amounts = sectors.map((s) => s.amountYi ?? 0).filter((v) => v > 0)
+    const amountSum = amounts.reduce((a, b) => a + b, 0)
+    if (amountSum > 0) {
+      const top3 = [...amounts].sort((a, b) => b - a).slice(0, 3).reduce((a, b) => a + b, 0)
+      return Math.round((top3 / amountSum) * 1000) / 10
+    }
+    return 72.4
+  })
+
+  /** 六指标卡 L2 详情面板（层级内容展示），组件层只做渲染 */
+  const metricDetails = computed<Record<MetricKey, MetricDetail>>(() => {
+    const snap = snapshot.value
+    const b = currentBreadth.value
+    return buildMetricDetails({
+      breadth: b,
+      limitUp: snap?.market.limitUp ?? marketExtras.limitUp,
+      limitDown: snap?.market.limitDown ?? marketExtras.limitDown,
+      brokenBoard: snap?.market.brokenBoard ?? marketExtras.brokenBoard,
+      turnoverYi: snap?.market.turnoverYi ?? marketExtras.turnoverYi,
+      shTurnoverYi: snap?.market.shTurnoverYi ?? marketExtras.shTurnoverYi,
+      szTurnoverYi: snap?.market.szTurnoverYi ?? marketExtras.szTurnoverYi,
+      avgTurnoverYi: marketExtras.avgTurnoverYi,
+      concentration: hotspotConcentration.value,
+      sectors: displaySectors.value,
+      totalFlowYi: displaySectors.value.reduce((acc, s) => acc + (s.flowYi ?? 0), 0)
+    })
   })
 
   // ---------- actions ----------
@@ -260,6 +297,8 @@ export const useMarketStore = defineStore('market', () => {
     pulseLabels,
     pulseCurrent,
     metricCards,
+    hotspotConcentration,
+    metricDetails,
     refresh,
     startAutoRefresh,
     stopAutoRefresh

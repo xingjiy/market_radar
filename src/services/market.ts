@@ -12,6 +12,10 @@ export interface MarketSnapshot {
     limitDown?: number
     brokenBoard?: number
     turnoverYi?: number
+    /** 沪市成交额（亿，腾讯指数报价） */
+    shTurnoverYi?: number
+    /** 深市成交额（亿，腾讯指数报价） */
+    szTurnoverYi?: number
   }
   sectors: Sector[]
   etfs: Array<ETF & { flow: string | null }>
