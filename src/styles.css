@@ -255,3 +255,23 @@ footer { display: flex; justify-content: space-between; gap: 20px; max-width: 14
 .brief-section h4 { margin: 0 0 5px; color: #22304a; font-size: 12px; }
 .brief-section h4::before { content: ''; display: inline-block; width: 4px; height: 4px; margin: 0 8px 2px 0; border-radius: 50%; background: var(--blue); }
 .brief-section p { margin: 0; color: #52627a; font-size: 12px; line-height: 1.8; }
+
+/* ===== 个股走势分析：多周期 / K线 / 指标 ===== */
+.horizon-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.horizon-chip { display: flex; align-items: baseline; gap: 8px; min-width: 120px; padding: 9px 13px; border: 1px solid var(--line); border-radius: 11px; background: #fafcff; }
+.horizon-chip span { color: #8b98aa; font-size: 10px; }
+.horizon-chip b { font-size: 18px; }
+.horizon-chip em { font-size: 11px; font-style: normal; font-weight: 700; }
+.horizon-chip.h-up { border-color: #ffd9dc; }
+.horizon-chip.h-up b, .horizon-chip.h-up em { color: var(--red); }
+.horizon-chip.h-down { border-color: #c8efe2; }
+.horizon-chip.h-down b, .horizon-chip.h-down em { color: var(--green); }
+.horizon-chip.h-range b, .horizon-chip.h-range em { color: #64748b; }
+.kline-chart { margin-top: 14px; }
+.indicator-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 12px; }
+.indicator-chip { min-width: 0; padding: 11px 13px; border: 1px solid var(--line); border-radius: 11px; background: #fafcff; }
+.indicator-chip span, .indicator-chip b, .indicator-chip em { display: block; }
+.indicator-chip span { color: #8b98aa; font-size: 10px; }
+.indicator-chip b { overflow: hidden; margin-top: 4px; color: #22304a; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.indicator-chip em { margin-top: 3px; font-size: 10px; font-style: normal; }
+@media (max-width: 760px) { .indicator-row { grid-template-columns: repeat(2, 1fr); } }

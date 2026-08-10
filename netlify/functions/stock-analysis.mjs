@@ -191,6 +191,100 @@ function buildTrend(kl, price) {
   }
 }
 
+/** EMA 序列 */
+function emaArray(values, period) {
+  if (values.length < period) return null
+  const out = []
+  const k = 2 / (period + 1)
+  let prev = values.slice(0, period).reduce((a, b) => a + b, 0) / period
+  out.push(prev)
+  for (let i = period; i < values.length; i += 1) {
+    prev = values[i] * k + prev * (1 - k)
+    out.push(prev)
+  }
+  return out
+}
+
+/** 技术指标：RSI14 / MACD / BOLL / 量能（5/20 日均量比） */
+function computeIndicators(kl) {
+  const closes = kl.map((k) => k.close)
+  const vols = kl.map((k) => k.volume)
+  // RSI14
+  let rsi14 = null
+  if (closes.length > 14) {
+    const slice = closes.slice(-15)
+    let gains = 0
+    let losses = 0
+    for (let i = 1; i < slice.length; i += 1) {
+      const diff = slice[i] - slice[i - 1]
+      if (diff >= 0) gains += diff
+      else losses -= diff
+    }
+    if (gains + losses > 0) rsi14 = round2((gains / (gains + losses)) * 100)
+  }
+  // MACD（EMA12/26 -> DIF，DIF 的 EMA9 -> DEA）
+  let macd = null
+  const e12 = emaArray(closes, 12)
+  const e26 = emaArray(closes, 26)
+  if (e12 && e26) {
+    // 对齐：e12 尾部与 e26 等长段逐点相减得 DIF
+    const difs = e12.slice(e12.length - e26.length).map((v, i) => v - e26[i])
+    const deas = emaArray(difs, 9)
+    if (deas) {
+      const i = difs.length - 1
+      macd = { dif: round2(difs[i]), dea: round2(deas[deas.length - 1]), hist: round2((difs[i] - deas[deas.length - 1]) * 2) }
+    }
+  }
+  // BOLL（MA20 ± 2σ）
+  const bollMid = ma(closes, 20)
+  let boll = null
+  if (bollMid !== null && closes.length >= 20) {
+    const slice = closes.slice(-20)
+    const mean = slice.reduce((a, b) => a + b, 0) / 20
+    const variance = slice.reduce((a, b) => a + (b - mean) ** 2, 0) / 20
+    const sd = Math.sqrt(variance)
+    boll = { up: round2(bollMid + 2 * sd), mid: round2(bollMid), low: round2(bollMid - 2 * sd) }
+  }
+  // 量能：5 日均量 / 20 日均量
+  const avgVol = (n) => (vols.length >= n ? vols.slice(-n).reduce((a, b) => a + b, 0) / n : null)
+  const v5 = avgVol(5)
+  const v20 = avgVol(20)
+  const volRatio = v5 !== null && v20 !== null && v20 > 0 ? round2(v5 / v20) : null
+  return { rsi14, macd, boll, volRatio }
+}
+
+/** 多周期走势评级：短期(5日)/中期(20日)/长期(60日) */
+function computeHorizons(kl, price) {
+  const closes = kl.map((k) => k.close)
+  const defs = [
+    { horizon: '短期', days: 5 },
+    { horizon: '中期', days: 20 },
+    { horizon: '长期', days: 60 }
+  ]
+  return defs.map((d) => {
+    const idx = closes.length - 1 - d.days
+    const past = idx >= 0 ? closes[idx] : null
+    let score = null
+    if (past && past > 0) {
+      const mom = ((price - past) / past) * 100
+      const m = ma(closes, d.days)
+      const above = m !== null ? price >= m : null
+      let s = 50
+      if (above === true) s += 15
+      else if (above === false) s -= 15
+      s += Math.max(-15, Math.min(15, mom))
+      score = Math.max(0, Math.min(100, Math.round(s)))
+    }
+    let direction = 'range'
+    let trendLabel = '震荡'
+    if (score !== null) {
+      if (score >= 60) { direction = 'up'; trendLabel = '偏强' }
+      else if (score <= 40) { direction = 'down'; trendLabel = '偏弱' }
+    }
+    return { horizon: d.horizon, label: `${d.days} 日`, score, direction, trendLabel }
+  })
+}
+
 /** 规则化摘要（无 LLM 时的默认分析文本） */
 function buildSummary(name, code, price, trend, levels) {
   const res = levels.resistance[0]
@@ -243,6 +337,8 @@ async function handler(event) {
     const price = last.close
     const levels = buildLevels(kl, price)
     const trend = buildTrend(kl, price)
+    const indicators = computeIndicators(kl)
+    const horizons = computeHorizons(kl, price)
 
     const name = String(event?.queryStringParameters?.name ?? '').trim() || code
     const summary = buildSummary(name, code, price, trend, levels)
@@ -256,6 +352,9 @@ async function handler(event) {
       date: last.date,
       levels,
       trend,
+      indicators,
+      horizons,
+      kline: kl.slice(-60).map((k) => ({ date: k.date, open: round2(k.open), close: round2(k.close), high: round2(k.high), low: round2(k.low), volume: k.volume })),
       summary,
       ai: null,
       warnings: []
@@ -271,6 +370,8 @@ async function handler(event) {
           price: round2(price),
           date: last.date,
           trend: { label: trend.label, score: trend.score, ma: trend.ma },
+          indicators,
+          horizons,
           levels,
           recentCloses: kl.slice(-15).map((k) => ({ date: k.date, close: k.close }))
         }

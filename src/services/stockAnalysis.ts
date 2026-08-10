@@ -23,6 +23,44 @@ export interface TrendInfo {
   notes: string[]
 }
 
+/** 日 K 点 */
+export interface KlinePoint {
+  date: string
+  open: number
+  close: number
+  high: number
+  low: number
+  volume: number
+}
+
+export interface MacdInfo {
+  dif: number | null
+  dea: number | null
+  hist: number | null
+}
+
+export interface BollInfo {
+  up: number
+  mid: number
+  low: number
+}
+
+export interface Indicators {
+  rsi14: number | null
+  macd: MacdInfo | null
+  boll: BollInfo | null
+  /** 5 日均量 / 20 日均量 */
+  volRatio: number | null
+}
+
+export interface HorizonInfo {
+  horizon: string
+  label: string
+  score: number | null
+  direction: 'up' | 'down' | 'range'
+  trendLabel: string
+}
+
 export interface StockAnalysis {
   source: 'rule' | 'ai'
   code: string
@@ -32,6 +70,10 @@ export interface StockAnalysis {
   date: string
   levels: LevelGroup
   trend: TrendInfo
+  indicators?: Indicators
+  horizons?: HorizonInfo[]
+  /** 近 60 日日 K（用于图表） */
+  kline?: KlinePoint[]
   /** 规则化摘要 */
   summary: string
   /** 可选：大模型诊断（配置 LLM_API_KEY 后返回） */

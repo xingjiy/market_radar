@@ -239,6 +239,99 @@ const trendTone = computed(() => {
   return 'flat-text'
 })
 
+function horizonTone(direction: 'up' | 'down' | 'range'): string {
+  if (direction === 'up') return 'h-up'
+  if (direction === 'down') return 'h-down'
+  return 'h-range'
+}
+
+/** RSI(14) 展示 */
+const rsiInfo = computed(() => {
+  const r = analysis.value?.indicators?.rsi14
+  if (r === null || r === undefined) return { value: '--', label: '', cls: '' }
+  const label = r >= 70 ? '超买' : r >= 55 ? '偏强' : r >= 45 ? '中性' : r >= 30 ? '偏弱' : '超卖'
+  const cls = r >= 70 ? 'flat-text' : r >= 55 ? 'up-text' : r >= 45 ? 'flat-text' : r >= 30 ? 'down-text' : 'up-text'
+  return { value: r.toFixed(1), label, cls }
+})
+
+/** MACD 展示 */
+const macdInfo = computed(() => {
+  const m = analysis.value?.indicators?.macd
+  if (!m || m.dif === null || m.dea === null) return { text: '--', label: '', cls: '' }
+  const cross = m.dif >= m.dea ? '金叉上方' : '死叉下方'
+  const power = (m.hist ?? 0) >= 0 ? '红柱' : '绿柱'
+  return { text: `DIF ${m.dif.toFixed(2)} / DEA ${m.dea.toFixed(2)}`, label: `${cross} · ${power}`, cls: (m.hist ?? 0) >= 0 ? 'up-text' : 'down-text' }
+})
+
+/** BOLL 展示 */
+const bollInfo = computed(() => {
+  const b = analysis.value?.indicators?.boll
+  const price = analysis.value?.price
+  if (!b || price === undefined) return { text: '--', label: '', cls: '' }
+  const pos = b.up > b.low ? Math.round(((price - b.low) / (b.up - b.low)) * 100) : 50
+  const label = pos >= 80 ? '上轨附近' : pos <= 20 ? '下轨附近' : '中轨运行'
+  return { text: `${b.up.toFixed(2)} / ${b.mid.toFixed(2)} / ${b.low.toFixed(2)}`, label, cls: pos >= 80 ? 'flat-text' : pos <= 20 ? 'up-text' : 'flat-text' }
+})
+
+/** 量能 5/20 展示 */
+const volInfo = computed(() => {
+  const vr = analysis.value?.indicators?.volRatio
+  if (vr === null || vr === undefined) return { text: '--', label: '', cls: '' }
+  const label = vr >= 1.5 ? '显著放量' : vr >= 1.1 ? '温和放量' : vr <= 0.7 ? '明显缩量' : vr <= 0.9 ? '温和缩量' : '量能平稳'
+  const cls = vr >= 1.5 ? 'flat-text' : vr >= 1.1 ? 'up-text' : 'down-text'
+  return { text: `${vr.toFixed(2)}x`, label, cls }
+})
+
+/** K 线图：蜡烛 + MA5/10/20/60 + 支撑/压力标记 + 成交量 */
+const hasKline = computed(() => Boolean(klineOption.value?.series))
+
+const klineOption = computed<echarts.EChartsOption>(() => {
+  const a = analysis.value
+  if (!a?.kline?.length) return {}
+  const rows = a.kline
+  const dates = rows.map((r) => r.date)
+  const candles = rows.map((r) => [r.open, r.close, r.low, r.high])
+  const vols = rows.map((r) => r.volume)
+  const maLine = (n: number): Array<number | null> => {
+    const closes = rows.map((r) => r.close)
+    return closes.map((_, i) => {
+      if (i < n - 1) return null
+      const slice = closes.slice(i - n + 1, i + 1)
+      return Math.round((slice.reduce((x, y) => x + y, 0) / n) * 100) / 100
+    })
+  }
+  const markLines: any[] = [
+    ...(a.levels.resistance ?? []).map((lv) => ({ yAxis: lv.price, lineStyle: { color: '#ef626e', type: 'dashed', width: 1 }, label: { formatter: `压力 ${lv.label} ${lv.price.toFixed(2)}`, color: '#ef626e', position: 'insideEndTop', fontSize: 10 } })),
+    ...(a.levels.support ?? []).map((lv) => ({ yAxis: lv.price, lineStyle: { color: '#14a57b', type: 'dashed', width: 1 }, label: { formatter: `支撑 ${lv.label} ${lv.price.toFixed(2)}`, color: '#14a57b', position: 'insideEndTop', fontSize: 10 } }))
+  ]
+  return {
+    animation: false,
+    tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
+    axisPointer: { link: [{ xAxisIndex: 'all' }] },
+    grid: [
+      { left: 62, right: 18, top: 18, height: '54%' },
+      { left: 62, right: 18, top: '72%', height: '15%' }
+    ],
+    xAxis: [
+      { type: 'category', data: dates, boundaryGap: true, axisLine: { lineStyle: { color: '#dbe4f0' } }, axisTick: { show: false }, axisLabel: { color: '#7d8ba1', fontSize: 10 }, splitLine: { show: false } },
+      { type: 'category', gridIndex: 1, data: dates, axisLabel: { show: false }, axisTick: { show: false }, axisLine: { show: false }, splitLine: { show: false } }
+    ],
+    yAxis: [
+      { scale: true, splitNumber: 4, splitLine: { lineStyle: { color: '#eef3f9' } }, axisLabel: { color: '#7d8ba1', fontSize: 10 } },
+      { gridIndex: 1, splitNumber: 2, splitLine: { show: false }, axisLabel: { show: false } }
+    ],
+    dataZoom: [{ type: 'inside', xAxisIndex: [0, 1], start: 50, end: 100 }],
+    series: [
+      { name: 'K线', type: 'candlestick', data: candles, itemStyle: { color: '#ef626e', color0: '#14a57b', borderColor: '#ef626e', borderColor0: '#14a57b' }, markLine: { symbol: 'none', data: markLines } },
+      { name: 'MA5', type: 'line', data: maLine(5), symbol: 'none', lineStyle: { width: 1, color: '#f7a81b' } },
+      { name: 'MA10', type: 'line', data: maLine(10), symbol: 'none', lineStyle: { width: 1, color: '#1677ff' } },
+      { name: 'MA20', type: 'line', data: maLine(20), symbol: 'none', lineStyle: { width: 1, color: '#9b59b6' } },
+      { name: 'MA60', type: 'line', data: maLine(60), symbol: 'none', lineStyle: { width: 1, color: '#5a6b7f' } },
+      { name: '成交量', type: 'bar', xAxisIndex: 1, yAxisIndex: 1, data: vols.map((v, i) => ({ value: v, itemStyle: { color: candles[i][1] >= candles[i][0] ? 'rgba(239,98,110,.5)' : 'rgba(20,165,123,.5)' } })), barWidth: '55%' }
+    ]
+  }
+})
+
 async function loadQuote(): Promise<void> {
   loading.value = true
   notFound.value = false
@@ -395,7 +488,7 @@ onMounted(() => {
     </section>
 
     <section v-if="detail" class="panel-card top-gap">
-      <SectionHeader eyebrow="TREND & AI · 走势分析" title="走势分析" caption="均线系统 + 趋势评分 + 智能诊断" />
+      <SectionHeader eyebrow="TREND & AI · 走势分析" title="走势分析" caption="K线趋势 + 技术指标 + 支撑压力 + 智能诊断" />
       <el-skeleton v-if="analysisLoading" :rows="3" animated />
       <p v-else-if="analysisError" class="detail-error">{{ analysisError }}</p>
       <div v-else-if="analysis" class="trend-board">
@@ -411,6 +504,22 @@ onMounted(() => {
               <b :class="m.className">{{ m.value }}</b>
             </div>
           </div>
+        </div>
+        <div v-if="analysis.horizons?.length" class="horizon-row">
+          <div v-for="h in analysis.horizons" :key="h.horizon" class="horizon-chip" :class="horizonTone(h.direction)">
+            <span>{{ h.horizon }}（{{ h.label }}）</span>
+            <b>{{ h.score ?? '--' }}</b>
+            <em>{{ h.trendLabel }}</em>
+          </div>
+        </div>
+        <div v-if="hasKline" class="kline-chart">
+          <ChartPanel :option="klineOption" :height="330" />
+        </div>
+        <div class="indicator-row">
+          <div class="indicator-chip"><span>RSI(14)</span><b :class="rsiInfo.cls">{{ rsiInfo.value }}</b><em :class="rsiInfo.cls">{{ rsiInfo.label }}</em></div>
+          <div class="indicator-chip"><span>MACD</span><b :class="macdInfo.cls">{{ macdInfo.text }}</b><em :class="macdInfo.cls">{{ macdInfo.label }}</em></div>
+          <div class="indicator-chip"><span>BOLL 上/中/下</span><b :class="bollInfo.cls">{{ bollInfo.text }}</b><em :class="bollInfo.cls">{{ bollInfo.label }}</em></div>
+          <div class="indicator-chip"><span>量能 5/20</span><b :class="volInfo.cls">{{ volInfo.text }}</b><em :class="volInfo.cls">{{ volInfo.label }}</em></div>
         </div>
         <ul class="trend-notes">
           <li v-for="(note, i) in analysis.trend.notes" :key="i">{{ note }}</li>

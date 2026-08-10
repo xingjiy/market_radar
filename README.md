@@ -30,7 +30,7 @@ npm run typecheck  # vue-tsc 类型检查
 | 07 | ETF 资金雷达 | `EtfTable.vue` |
 | 08 | 核心观察列表 | `WatchList.vue` |
 | 09 | AI 市场简报（六段式详细简报 · 规则/AI 生成） | `AiBriefCard.vue` |
-| — | 全局搜索 / 个股追踪（支撑压力 · 走势分析 · AI 诊断） | `GlobalSearch.vue` + `views/StockDetail.vue` |
+| — | 全局搜索 / 个股追踪（支撑压力 · K线/指标走势分析 · AI 诊断） | `GlobalSearch.vue` + `views/StockDetail.vue` |
 
 ## 目录结构
 
