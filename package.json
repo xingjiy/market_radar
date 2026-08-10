@@ -1,24 +1,27 @@
-{
-  "name": "radar-os-a-share-dashboard",
-  "private": true,
-  "version": "1.0.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "@element-plus/icons-vue": "^2.3.1",
-    "echarts": "^5.6.0",
-    "element-plus": "^2.9.8",
-    "vue": "^3.5.17"
-  },
-  "devDependencies": {
-    "@vitejs/plugin-vue": "^4.6.2",
-    "@types/node": "^20.14.12",
-    "typescript": "^5.8.3",
-    "vite": "^4.5.5",
-    "vue-tsc": "^1.8.27"
-  }
+﻿{
+    "name":  "radar-os-a-share-dashboard",
+    "private":  true,
+    "version":  "1.0.0",
+    "type":  "module",
+    "scripts":  {
+                    "dev":  "vite",
+                    "build":  "vite build",
+                    "preview":  "vite preview",
+                    "typecheck":  "vue-tsc --noEmit -p tsconfig.app.json"
+                },
+    "dependencies":  {
+                         "@element-plus/icons-vue":  "^2.3.1",
+                         "echarts":  "^5.6.0",
+                         "element-plus":  "^2.9.8",
+                         "pinia":  "^4.0.2",
+                         "vue":  "^3.5.17",
+                         "vue-router":  "^4.6.4"
+                     },
+    "devDependencies":  {
+                            "@types/node":  "^20.14.12",
+                            "@vitejs/plugin-vue":  "^4.6.2",
+                            "typescript":  "^5.8.3",
+                            "vite":  "^4.5.5",
+                            "vue-tsc":  "^2.2.12"
+                        }
 }

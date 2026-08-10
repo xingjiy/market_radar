@@ -1,48 +1,67 @@
-# Radar OS · A股市场雷达
+﻿# Radar OS · A股市场雷达
 
-基于 Vue 3 + TypeScript + Vite + Element Plus + ECharts 的专业金融科技 Dashboard UI。当前版本使用本地 Mock 数据，重点还原 PRD 中的市场全景首页与交互闭环。
+基于 Vue 3 + TypeScript + Vite + Element Plus + ECharts 的专业金融科技 Dashboard。
+数据源：东方财富公开行情接口（Netlify Functions 代理），失败自动降级 Mock。
+产品设计文档见 [`docs/A股市场雷达_Radar_OS_产品设计文档.md`](docs/A股市场雷达_Radar_OS_产品设计文档.md)。
 
 ## 快速开始
 
 ```bash
 npm install
-npm run dev
+npm run dev      # 本地开发（5173）
+npm run build    # 生产构建（dist/）
+npm run preview  # 预览构建产物
+npm run typecheck  # vue-tsc 类型检查
 ```
 
-生产构建：
+> 本地开发时未启动 Netlify Functions 时，`/api/*` 请求会失败并自动回退 Mock 数据（右上角显示数据源）。
 
-```bash
-npm run build
-npm run preview
+## 功能模块
+
+| 编号 | 模块 | 组件 |
+| --- | --- | --- |
+| 01 | 市场脉冲（Hero） | `PulseGauge.vue` |
+| — | 核心指标网格 | `MetricGrid.vue` |
+| 02 | 市场脉冲走势（今日/本周/本月） | `PulseTrend.vue` |
+| 03 | 市场情绪雷达 | `EmotionRadar.vue` |
+| 04 | 热点板块排行 | `SectorBar.vue` |
+| 05 | 板块轮动地图 | `RotationMap.vue` |
+| 06 | ETF 资金雷达 | `EtfTable.vue` |
+| 07 | 核心观察列表 | `WatchList.vue` |
+| 08 | AI 市场简报 | `AiBriefCard.vue` |
+| — | 全局搜索 / 个股追踪 | `GlobalSearch.vue` + `views/StockDetail.vue` |
+
+## 目录结构
+
+```text
+src/
+├── main.ts / App.vue / styles.css
+├── router/index.ts          # / 市场全景 · /stock/:code 个股追踪
+├── stores/                  # Pinia：market（快照/自动刷新）、watchlist（观察池）
+├── services/                # http / market / stockSearch / watchlist / brief
+├── utils/indicators.ts      # 指标引擎：脉冲/情绪/板块强度/ETF评分（纯函数）
+├── data/mock.ts             # 类型契约 + Mock 数据（类型即接口契约）
+├── components/              # 图表与业务组件（ChartPanel 封装 ECharts 生命周期）
+└── views/                   # MarketOverview（首页聚合）、StockDetail
+netlify/functions/           # market-snapshot（聚合快照+涨停/跌停/炸板）、stock-search
+docs/                        # 产品设计文档
 ```
 
-## Netlify 部署
+## 数据源与降级
 
-项目已包含 `netlify.toml`，Netlify 连接仓库后会自动执行 `npm run build`，并发布 `dist` 目录。也可以使用 Netlify CLI：
+- **东方财富**：指数/涨跌家数（`ulist.np/get`）、行业板块（`clist/get`）、ETF（`ulist.np/get`）、涨停/跌停/炸板池（`push2ex`）、搜索（`searchapi`）；
+- **降级链**：东方财富 → （腾讯，规划）→ Mock；
+- 代理层按数据域独立降级（指数失败不影响板块/ETF），`warnings[]` 上报前端；
+- 自动刷新：盘中 60s 轮询，页面隐藏暂停，连续 3 次失败自动停止。
 
-```bash
-npm install -g netlify-cli
-netlify deploy --prod
-```
+## 指标口径（详见设计文档第 7 章）
 
-## 目录说明
+- 市场脉冲指数：涨跌比例25% + 涨停20% + 主力资金20% + 成交量15% + 热点10% + 波动10%；
+- 板块强度：涨幅30% + 成交额20% + 资金流30% + 涨停数20%；
+- ETF 评分：价格趋势30% + 资金流30% + 成交活跃20% + 板块强度20%；
+- 情绪雷达六维：赚钱效应 / 资金活跃 / 热点强度 / 连板高度 / 市场宽度 / 风险偏好。
 
-- `src/data/mock.ts`：Mock 数据与类型定义，后续替换为 API 适配器即可。
-- `src/components/ChartPanel.vue`：ECharts 生命周期与响应式尺寸封装。
-- `src/App.vue`：Dashboard 页面组合、搜索、刷新、时间范围、关注池与简报交互。
-- `src/styles.css`：响应式金融科技视觉系统。
-- `netlify/functions/market-snapshot.mjs`：东方财富行情代理，聚合指数、市场宽度、板块和 ETF 快照。
-- `src/services/market.ts`：前端行情服务，实时接口失败时自动回退 Mock。
+## 说明
 
-## 数据源接入
-
-当前已接入东方财富公开行情接口（指数、市场涨跌家数、行业板块、ETF 快照），通过 Netlify Function 统一代理到 `/api/market-snapshot`，避免浏览器跨域限制。页面右上角会显示当前数据源：
-
-- `东方财富`：实时接口返回成功。
-- `Mock`：接口超时、限流或本地开发未启动 Functions 时的兜底状态。
-
-本项目没有把任何账号密钥写入前端。东方财富公开行情接口可能存在频率限制，生产环境建议在 Function 中增加缓存、重试和数据源切换策略。
-
-## 后续 API 接入建议
-
-保持 `mock.ts` 中的类型契约不变，将数据读取移动到 `src/services/`，按 `market / sectors / etfs / watchlist / brief` 拆分接口；图表组件无需改动。
+- A 股颜色约定：红涨绿跌；
+- 页面仅供研究参考，不构成投资建议。

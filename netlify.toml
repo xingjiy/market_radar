@@ -14,6 +14,11 @@
   status = 200
 
 [[redirects]]
+  from = "/api/stock-search"
+  to = "/.netlify/functions/stock-search"
+  status = 200
+
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
