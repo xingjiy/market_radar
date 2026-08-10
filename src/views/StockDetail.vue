@@ -284,6 +284,8 @@ const volInfo = computed(() => {
 
 /** K 线图：蜡烛 + MA5/10/20/60 + 支撑/压力标记 + 成交量 */
 const hasKline = computed(() => Boolean(klineOption.value?.series))
+/** K 线图：默认仅显示最近 1 条支撑/压力，避免遮挡；可切换全部 */
+const showAllLevels = ref(false)
 
 const klineOption = computed<echarts.EChartsOption>(() => {
   const a = analysis.value
@@ -300,9 +302,11 @@ const klineOption = computed<echarts.EChartsOption>(() => {
       return Math.round((slice.reduce((x, y) => x + y, 0) / n) * 100) / 100
     })
   }
+  const resLevels = showAllLevels.value ? a.levels.resistance : (a.levels.resistance ?? []).slice(0, 1)
+  const supLevels = showAllLevels.value ? a.levels.support : (a.levels.support ?? []).slice(0, 1)
   const markLines: any[] = [
-    ...(a.levels.resistance ?? []).map((lv) => ({ yAxis: lv.price, lineStyle: { color: '#ef626e', type: 'dashed', width: 1 }, label: { formatter: `压力 ${lv.label} ${lv.price.toFixed(2)}`, color: '#ef626e', position: 'insideEndTop', fontSize: 10 } })),
-    ...(a.levels.support ?? []).map((lv) => ({ yAxis: lv.price, lineStyle: { color: '#14a57b', type: 'dashed', width: 1 }, label: { formatter: `支撑 ${lv.label} ${lv.price.toFixed(2)}`, color: '#14a57b', position: 'insideEndTop', fontSize: 10 } }))
+    ...resLevels.map((lv) => ({ yAxis: lv.price, lineStyle: { color: '#ef626e', type: 'dashed', width: 1 }, label: { formatter: `压力 ${lv.label} ${lv.price.toFixed(2)}`, color: '#ef626e', position: 'insideEndTop', fontSize: 10 } })),
+    ...supLevels.map((lv) => ({ yAxis: lv.price, lineStyle: { color: '#14a57b', type: 'dashed', width: 1 }, label: { formatter: `支撑 ${lv.label} ${lv.price.toFixed(2)}`, color: '#14a57b', position: 'insideEndTop', fontSize: 10 } }))
   ]
   return {
     animation: false,
@@ -512,8 +516,16 @@ onMounted(() => {
             <em>{{ h.trendLabel }}</em>
           </div>
         </div>
-        <div v-if="hasKline" class="kline-chart">
-          <ChartPanel :option="klineOption" :height="330" />
+        <div v-if="hasKline" class="kline-block">
+          <div class="kline-head">
+            <span class="kline-caption">近 60 日 · 蜡烛 + 均线 + 支撑/压力</span>
+            <button type="button" class="kline-toggle" @click="showAllLevels = !showAllLevels">
+              {{ showAllLevels ? '仅显示最近支撑/压力' : '显示全部支撑/压力' }}
+            </button>
+          </div>
+          <div class="kline-chart">
+            <ChartPanel :option="klineOption" :height="330" />
+          </div>
         </div>
         <div class="indicator-row">
           <div class="indicator-chip"><span>RSI(14)</span><b :class="rsiInfo.cls">{{ rsiInfo.value }}</b><em :class="rsiInfo.cls">{{ rsiInfo.label }}</em></div>

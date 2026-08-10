@@ -275,3 +275,9 @@ footer { display: flex; justify-content: space-between; gap: 20px; max-width: 14
 .indicator-chip b { overflow: hidden; margin-top: 4px; color: #22304a; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
 .indicator-chip em { margin-top: 3px; font-size: 10px; font-style: normal; }
 @media (max-width: 760px) { .indicator-row { grid-template-columns: repeat(2, 1fr); } }
+
+/* ===== K线图头部：支撑/压力显示切换 ===== */
+.kline-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; }
+.kline-caption { color: #8b98aa; font-size: 11px; }
+.kline-toggle { padding: 5px 11px; border: 1px solid #dbe6f3; border-radius: 100px; color: #2478df; background: #f4f9ff; font-size: 11px; transition: .18s; }
+.kline-toggle:hover { border-color: #9cc9ff; background: #eaf3ff; }
